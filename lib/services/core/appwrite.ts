@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import {
   Account,
   Client,
-  TablesDB,
+  Databases,
   Teams,
   Storage,
   Users,
@@ -29,8 +29,8 @@ export async function createSessionClient() {
     get account() {
       return new Account(client);
     },
-    get tablesDB() {
-      return new TablesDB(client);
+    get databases() {
+      return new Databases(client);
     },
     get storage() {
       return new Storage(client);
@@ -54,11 +54,14 @@ export async function createAdminClient() {
     get users() {
       return new Users(client);
     },
-    get tablesDB() {
-      return new TablesDB(client);
+    get databases() {
+      return new Databases(client);
     },
     get storage() {
       return new Storage(client);
+    },
+    get teams() {
+      return new Teams(client);
     },
   };
 }

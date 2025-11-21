@@ -12,11 +12,14 @@ import { Eye, EyeOff, Lock, MailIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import * as z from "zod"
+import { signInAction } from "@/lib/services/actions/auth.actions";
+import { useRouter } from "next/navigation";
 
 type SignInFormValues = z.infer<typeof signInFormSchema>
 
 export function SignInCard() {
     const [showPassword, setShowPassword] = useState(false);
+    const router = useRouter();
 
     const form = useForm<SignInFormValues>({
         resolver: zodResolver(signInFormSchema),
@@ -27,12 +30,30 @@ export function SignInCard() {
     })
 
     async function onSubmit(data: SignInFormValues) {
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        try {
+            const result = await signInAction(data);
 
-        toast.success("Sign in successful!", {
-            description: `Welcome back! Signed in as ${data.email}`,
-            position: "bottom-right",
-        })
+            if (result?.data?.success) {
+                toast.success("Sign in successful!", {
+                    description: `Welcome back, ${result.data.user.name}!`,
+                    position: "bottom-right",
+                });
+
+                // Redirect based on user role
+                if (result.data.user.isSuperAdmin) {
+                    router.push("/admin/dashboard");
+                } else {
+                    router.push("/dashboard");
+                }
+            } else if (result?.serverError) {
+                toast.error("Sign in failed", {
+                    description: result.serverError,
+                    position: "bottom-right",
+                });
+            }
+        } catch (error) {
+            console.log("diuwebdhebde: ", error)
+        }
     }
 
     return (

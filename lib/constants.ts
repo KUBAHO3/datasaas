@@ -1,1 +1,1 @@
-export const AUTH_COOKIE = "auth-cookie";
+export const AUTH_COOKIE = "datasaas-auth-cookie";

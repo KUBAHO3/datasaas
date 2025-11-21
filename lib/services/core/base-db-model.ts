@@ -71,11 +71,11 @@ function buildQueries(where?: WhereClause[]): string[] {
 
 abstract class BaseDBModel<T = any> {
   protected databaseId: string;
-  protected tableId: string;
+  protected collectionId: string;
 
-  constructor(databaseId: string, tableId: string) {
+  constructor(databaseId: string, collectionId: string) {
     this.databaseId = databaseId;
-    this.tableId = tableId;
+    this.collectionId = collectionId;
   }
 
   protected abstract getClient(): Promise<any>;
@@ -110,13 +110,13 @@ abstract class BaseDBModel<T = any> {
       queries.push(Query.select(options.select));
     }
 
-    const response = await client.tablesDB.listRows({
-      databaseId: this.databaseId,
-      tableId: this.tableId,
-      queries: queries.length > 0 ? queries : undefined,
-    });
+    const response = await client.databases.listDocuments(
+      this.databaseId,
+      this.collectionId,
+      queries.length > 0 ? queries : undefined
+    );
 
-    return response.rows as T[];
+    return response.documents as T[];
   }
 
   async findOne(options: FindOptions = {}): Promise<T | null> {
@@ -124,14 +124,14 @@ abstract class BaseDBModel<T = any> {
     return results.length > 0 ? results[0] : null;
   }
 
-  async findById(rowId: string): Promise<T | null> {
+  async findById(documentId: string): Promise<T | null> {
     try {
       const client = await this.getClient();
-      const response = await client.tablesDB.getRow({
-        databaseId: this.databaseId,
-        tableId: this.tableId,
-        rowId,
-      });
+      const response = await client.databases.getDocument(
+        this.databaseId,
+        this.collectionId,
+        documentId
+      );
       return response as T;
     } catch (error: any) {
       if (error.code === 404) {
@@ -149,159 +149,179 @@ abstract class BaseDBModel<T = any> {
     }
 
     const client = await this.getClient();
-    const response = await client.tablesDB.listRows({
-      databaseId: this.databaseId,
-      tableId: this.tableId,
-      queries: queries.length > 0 ? queries : undefined,
-    });
+    const response = await client.databases.listDocuments(
+      this.databaseId,
+      this.collectionId,
+      queries.length > 0 ? queries : undefined
+    );
 
     return response.total;
   }
 }
 
 export class SessionDBModel<T = any> extends BaseDBModel<T> {
-  constructor(databaseId: string, tableId: string) {
-    super(databaseId, tableId);
+  constructor(databaseId: string, collectionId: string) {
+    super(databaseId, collectionId);
   }
 
   protected async getClient() {
     return await createSessionClient();
   }
 
-  async create(data: Partial<T>, rowId?: string): Promise<T> {
+  async create(
+    data: Partial<T>,
+    documentId?: string,
+    permissions?: string[]
+  ): Promise<T> {
     const client = await this.getClient();
-    const response = await client.tablesDB.createRow({
-      databaseId: this.databaseId,
-      tableId: this.tableId,
-      rowId: rowId || ID.unique(),
+    const response = await client.databases.createDocument(
+      this.databaseId,
+      this.collectionId,
+      documentId || ID.unique(),
       data,
-    });
+      permissions
+    );
 
     return response as T;
   }
 
-  async updateById(rowId: string, data: UpdateData): Promise<T> {
+  async updateById(
+    documentId: string,
+    data: UpdateData,
+    permissions?: string[]
+  ): Promise<T> {
     const client = await this.getClient();
-    const response = await client.tablesDB.updateRow({
-      databaseId: this.databaseId,
-      tableId: this.tableId,
-      rowId,
+    const response = await client.databases.updateDocument(
+      this.databaseId,
+      this.collectionId,
+      documentId,
       data,
-    });
+      permissions
+    );
     return response as T;
   }
 
   async updateMany(options: FindOptions, data: UpdateData) {
-    const rows = await this.findMany(options);
+    const documents = await this.findMany(options);
     const client = await this.getClient();
 
-    const updatePromises = rows.map((row: any) =>
-      client.tablesDB.updateRow({
-        databaseId: this.databaseId,
-        tableId: this.tableId,
-        rowId: row.$id,
-        data,
-      })
+    const updatePromises = documents.map((doc: any) =>
+      client.databases.updateDocument(
+        this.databaseId,
+        this.collectionId,
+        doc.$id,
+        data
+      )
     );
 
     return await Promise.all(updatePromises);
   }
 
-  async deleteById(rowId: string): Promise<void> {
+  async deleteById(documentId: string): Promise<void> {
     const client = await this.getClient();
-    await client.tablesDB.deleteRow({
-      databaseId: this.databaseId,
-      tableId: this.tableId,
-      rowId,
-    });
+    await client.databases.deleteDocument(
+      this.databaseId,
+      this.collectionId,
+      documentId
+    );
   }
 
   async deleteMany(options: FindOptions): Promise<number> {
-    const rows = await this.findMany(options);
+    const documents = await this.findMany(options);
     const client = await this.getClient();
 
-    const deletePromises = rows.map((row: any) =>
-      client.tablesDB.deleteRow({
-        databaseId: this.databaseId,
-        tableId: this.tableId,
-        rowId: row.$id,
-      })
+    const deletePromises = documents.map((doc: any) =>
+      client.databases.deleteDocument(
+        this.databaseId,
+        this.collectionId,
+        doc.$id
+      )
     );
 
     await Promise.all(deletePromises);
-    return rows.length;
+    return documents.length;
   }
 }
 
 export class AdminDBModel<T = any> extends BaseDBModel<T> {
-  constructor(databaseId: string, tableId: string) {
-    super(databaseId, tableId);
+  constructor(databaseId: string, collectionId: string) {
+    super(databaseId, collectionId);
   }
 
   protected async getClient() {
     return await createAdminClient();
   }
 
-  async create(data: Partial<T>, rowId?: string): Promise<T> {
+  async create(
+    data: Partial<T>,
+    documentId?: string,
+    permissions?: string[]
+  ): Promise<T> {
     const client = await this.getClient();
-    const response = await client.tablesDB.createRow({
-      databaseId: this.databaseId,
-      tableId: this.tableId,
-      rowId: rowId || ID.unique(),
+    const response = await client.databases.createDocument(
+      this.databaseId,
+      this.collectionId,
+      documentId || ID.unique(),
       data,
-    });
+      permissions
+    );
     return response as T;
   }
 
-  async updateById(rowId: string, data: UpdateData): Promise<T> {
+  async updateById(
+    documentId: string,
+    data: UpdateData,
+    permissions?: string[]
+  ): Promise<T> {
     const client = await this.getClient();
-    const response = await client.tablesDB.updateRow({
-      databaseId: this.databaseId,
-      tableId: this.tableId,
-      rowId,
+    const response = await client.databases.updateDocument(
+      this.databaseId,
+      this.collectionId,
+      documentId,
       data,
-    });
+      permissions
+    );
     return response as T;
   }
 
   async updateMany(options: FindOptions, data: UpdateData) {
-    const rows = await this.findMany(options);
+    const documents = await this.findMany(options);
     const client = await this.getClient();
 
-    const updatePromises = rows.map((row: any) =>
-      client.tablesDB.updateRow({
-        databaseId: this.databaseId,
-        tableId: this.tableId,
-        rowId: row.$id,
-        data,
-      })
+    const updatePromises = documents.map((doc: any) =>
+      client.databases.updateDocument(
+        this.databaseId,
+        this.collectionId,
+        doc.$id,
+        data
+      )
     );
 
     return await Promise.all(updatePromises);
   }
 
-  async deleteById(rowId: string): Promise<void> {
+  async deleteById(documentId: string): Promise<void> {
     const client = await this.getClient();
-    await client.tablesDB.deleteRow({
-      databaseId: this.databaseId,
-      tableId: this.tableId,
-      rowId,
-    });
+    await client.databases.deleteDocument(
+      this.databaseId,
+      this.collectionId,
+      documentId
+    );
   }
 
   async deleteMany(options: FindOptions): Promise<number> {
-    const rows = await this.findMany(options);
+    const documents = await this.findMany(options);
     const client = await this.getClient();
 
-    const deletePromises = rows.map((row: any) =>
-      client.tablesDB.deleteRow({
-        databaseId: this.databaseId,
-        tableId: this.tableId,
-        rowId: row.$id,
-      })
+    const deletePromises = documents.map((doc: any) =>
+      client.databases.deleteDocument(
+        this.databaseId,
+        this.collectionId,
+        doc.$id
+      )
     );
 
     await Promise.all(deletePromises);
-    return rows.length;
+    return documents.length;
   }
 }
