@@ -89,7 +89,7 @@ export const approveCompanyAction = action
         approvedAt: new Date().toISOString(),
       });
 
-      revalidatePath("/admin/dashboard");
+      revalidatePath("/admin");
       revalidatePath("/admin/companies");
 
       return {
@@ -130,7 +130,7 @@ export const rejectCompanyAction = action
         rejectionReason: reason,
       });
 
-      revalidatePath("/admin/dashboard");
+      revalidatePath("/admin");
       revalidatePath("/admin/companies");
 
       return {
@@ -167,7 +167,7 @@ export const suspendCompanyAction = action
         status: "suspended",
       });
 
-      revalidatePath("/admin/dashboard");
+      revalidatePath("/admin");
       revalidatePath("/admin/companies");
 
       return {
@@ -204,7 +204,7 @@ export const activateCompanyAction = action
         status: "active",
       });
 
-      revalidatePath("/admin/dashboard");
+      revalidatePath("/admin");
       revalidatePath("/admin/companies");
 
       return {

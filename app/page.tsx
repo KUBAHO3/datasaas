@@ -15,7 +15,7 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col mx-auto">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="container flex h-16 items-center justify-between px-6">
@@ -34,7 +34,7 @@ export default async function HomePage() {
         </div>
       </header>
 
-      <main className="flex-1">
+      <div className="flex-1 mx-auto">
         <section className="container px-6 py-24 md:py-32">
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
@@ -103,7 +103,7 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
-      </main>
+      </div>
 
       <footer className="border-t py-6">
         <div className="container px-6 text-center text-sm text-muted-foreground">

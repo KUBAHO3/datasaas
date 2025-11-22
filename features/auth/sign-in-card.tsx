@@ -41,7 +41,7 @@ export function SignInCard() {
 
                 // Redirect based on user role
                 if (result.data.user.isSuperAdmin) {
-                    router.push("/admin/dashboard");
+                    router.push("/admin");
                 } else {
                     router.push("/dashboard");
                 }
