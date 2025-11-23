@@ -29,7 +29,7 @@ export async function getOnboardingProgress() {
     if (!session) {
       throw new Error("Not authenticated");
     }
-    
+
     const sessionAccountService = new SessionAccountService();
     const user = await sessionAccountService.get();
 
@@ -265,6 +265,69 @@ export const submitOnboarding = authAction.action(async ({ ctx }) => {
     return {
       error:
         error instanceof Error ? error.message : "Failed to submit application",
+    };
+  }
+});
+
+export const resubmitOnboarding = authAction.action(async ({ ctx }) => {
+  try {
+    const onboardingModel = new OnboardingAdminModel();
+    const progress = await onboardingModel.findByUserId(ctx.userId);
+
+    if (!progress) {
+      return { error: "Onboarding progress not found" };
+    }
+
+    if (progress.status !== "rejected") {
+      return { error: "Can only resubmit rejected applications" };
+    }
+
+    if (
+      !progress.companyBasicInfo ||
+      !progress.companyAddress ||
+      !progress.companyBranding ||
+      !progress.documents
+    ) {
+      return { error: "Please complete all steps before resubmitting" };
+    }
+
+    const companyModel = new CompanyAdminModel();
+
+    const existingCompany = await companyModel.findOne({
+      where: [{ field: "createdBy", operator: "equals", value: ctx.userId }],
+    });
+
+    if (!existingCompany) {
+      return { error: "Company record not found" };
+    }
+
+    await companyModel.updateById(existingCompany.$id, {
+      status: "pending",
+      rejectedBy: undefined,
+      rejectedAt: undefined,
+      rejectionReason: undefined,
+    });
+
+    await onboardingModel.updateProgress(ctx.userId, {
+      status: "submitted",
+    });
+
+    revalidatePath("/onboarding");
+    revalidatePath("/onboarding/pending-approval");
+    revalidatePath("/admin/companies");
+
+    return {
+      success: true,
+      message: "Application resubmitted successfully",
+      companyId: existingCompany.$id,
+    };
+  } catch (error) {
+    console.error("Resubmit onboarding error:", error);
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to resubmit application",
     };
   }
 });

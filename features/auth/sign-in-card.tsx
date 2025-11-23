@@ -9,12 +9,12 @@ import { signInFormSchema } from "@/lib/schemas/user-schema";
 import { toast } from "sonner";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Eye, EyeOff, Lock, MailIcon } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import * as z from "zod"
 import { signInAction } from "@/lib/services/actions/auth.actions";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAction } from "next-safe-action/hooks";
 
 type SignInFormValues = z.infer<typeof signInFormSchema>
 
@@ -28,33 +28,35 @@ export function SignInCard() {
             email: "",
             password: ""
         }
-    })
+    });
 
-    async function onSubmit(data: SignInFormValues) {
-        try {
-            const result = await signInAction(data);
-
-            if (result?.data?.success) {
+    const { execute: signIn, isExecuting: isSigningIn } = useAction(signInAction, {
+        onSuccess: ({ data }) => {
+            if (data?.success && data.user) {
                 toast.success("Sign in successful!", {
-                    description: `Welcome back, ${result.data.user.name}!`,
-                    position: "bottom-right",
+                    description: `Welcome back, ${data.user.name}!`,
                 });
 
-                // Redirect based on user role
-                if (result.data.user.isSuperAdmin) {
+                if (data.user.isSuperAdmin) {
                     router.push("/admin");
                 } else {
                     router.push("/dashboard");
                 }
-            } else if (result?.serverError) {
+            } else if (data?.error) {
                 toast.error("Sign in failed", {
-                    description: result.serverError,
-                    position: "bottom-right",
+                    description: data.error,
                 });
             }
-        } catch (error) {
-            console.log("diuwebdhebde: ", error)
-        }
+        },
+        onError: ({ error }) => {
+            toast.error("Sign in failed", {
+                description: error.serverError || "An error occurred during sign in",
+            });
+        },
+    });
+
+    function onSubmit(data: SignInFormValues) {
+        signIn(data);
     }
 
     return (
@@ -159,16 +161,16 @@ export function SignInCard() {
                         type="submit"
                         form="sign-in-form"
                         className="w-full"
-                        disabled={form.formState.isSubmitting}
+                        disabled={isSigningIn}
                     >
-                        {form.formState.isSubmitting ? "Signing in..." : "Sign In"}
+                        {isSigningIn ? "Signing in..." : "Sign In"}
                     </Button>
 
                     <div className="flex items-center gap-3 before:h-px w-full before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
                         <span className="text-xs text-muted-foreground">Or</span>
                     </div>
 
-                    <Button variant="outline" type="button" disabled={form.formState.isSubmitting} className="w-full">
+                    <Button variant="outline" type="button" disabled={isSigningIn} className="w-full">
                         <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                             <path
                                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"

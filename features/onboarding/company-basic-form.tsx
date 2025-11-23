@@ -12,6 +12,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Building2, Globe, Phone } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { useAction } from "next-safe-action/hooks";
 
 const INDUSTRIES = [
     "Technology",
@@ -53,20 +54,23 @@ export function CompanyBasicInfoForm({ initialData }: CompanyBasicInfoFormProps)
         },
     });
 
-    async function onSubmit(data: CompanyBasicInfoInput) {
-        try {
-            const result = await saveCompanyBasicInfo(data);
-
-            if (result?.data?.success) {
+    // Use next-safe-action hook for saving
+    const { execute: saveInfo, isExecuting: isSaving } = useAction(saveCompanyBasicInfo, {
+        onSuccess: ({ data }) => {
+            if (data?.success) {
                 toast.success("Company information saved!");
                 router.push("/onboarding/step-3");
-            } else if (result?.serverError) {
-                toast.error(result.serverError);
+            } else if (data?.error) {
+                toast.error(data.error);
             }
-        } catch (error) {
-            console.error("Save error:", error);
-            toast.error("Failed to save company information");
-        }
+        },
+        onError: ({ error }) => {
+            toast.error(error.serverError || "Failed to save company information");
+        },
+    });
+
+    function onSubmit(data: CompanyBasicInfoInput) {
+        saveInfo(data);
     }
 
     return (
@@ -232,18 +236,19 @@ export function CompanyBasicInfoForm({ initialData }: CompanyBasicInfoFormProps)
                             type="button"
                             variant="outline"
                             onClick={() => router.back()}
+                            disabled={isSaving}
                         >
                             Back
                         </Button>
                         <Button
                             type="submit"
-                            disabled={form.formState.isSubmitting}
+                            disabled={isSaving}
                         >
-                            {form.formState.isSubmitting ? "Saving..." : "Continue"}
+                            {isSaving ? "Saving..." : "Continue"}
                         </Button>
                     </div>
                 </form>
             </CardContent>
         </Card>
-    )
+    );
 }

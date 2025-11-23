@@ -7,8 +7,8 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Building2, MapPin, FileText, CheckCircle2, Edit } from "lucide-react";
 import { OnboardingProgress } from "@/lib/types/onboarding-types";
-import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
+import { useAction } from "next-safe-action/hooks";
 
 interface ReviewSubmissionProps {
     progress: OnboardingProgress;
@@ -16,27 +16,23 @@ interface ReviewSubmissionProps {
 
 export function ReviewSubmission({ progress }: ReviewSubmissionProps) {
     const router = useRouter();
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    async function handleSubmit() {
-        setIsSubmitting(true);
-        try {
-            const result = await submitOnboarding();
-
-            if (result?.data?.success) {
+    const { execute: submit, isExecuting: isSubmitting } = useAction(submitOnboarding, {
+        onSuccess: ({ data }) => {
+            if (data?.success) {
                 toast.success("Application submitted successfully!", {
                     description: "Your application is now under review."
                 });
-                router.push("/pending-approval");
-            } else if (result?.serverError) {
-                toast.error(result.serverError);
+
+                router.push("/onboarding/pending-approval");
+            } else if (data?.error) {
+                toast.error(data.error);
             }
-        } catch (error) {
-            toast.error("Failed to submit application");
-        } finally {
-            setIsSubmitting(false);
-        }
-    }
+        },
+        onError: ({ error }) => {
+            toast.error(error.serverError || "Failed to submit application");
+        },
+    });
 
     const isComplete =
         progress.companyBasicInfo &&
@@ -63,6 +59,7 @@ export function ReviewSubmission({ progress }: ReviewSubmissionProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => router.push("/onboarding/step-2")}
+                            disabled={isSubmitting}
                         >
                             <Edit className="h-4 w-4 mr-1" />
                             Edit
@@ -98,6 +95,7 @@ export function ReviewSubmission({ progress }: ReviewSubmissionProps) {
                     )}
                 </div>
 
+                {/* Company Address */}
                 <div className="rounded-lg border p-4">
                     <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-2">
@@ -108,6 +106,7 @@ export function ReviewSubmission({ progress }: ReviewSubmissionProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => router.push("/onboarding/step-3")}
+                            disabled={isSubmitting}
                         >
                             <Edit className="h-4 w-4 mr-1" />
                             Edit
@@ -124,6 +123,7 @@ export function ReviewSubmission({ progress }: ReviewSubmissionProps) {
                     )}
                 </div>
 
+                {/* Branding & Tax */}
                 <div className="rounded-lg border p-4">
                     <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-2">
@@ -134,6 +134,7 @@ export function ReviewSubmission({ progress }: ReviewSubmissionProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => router.push("/onboarding/step-4")}
+                            disabled={isSubmitting}
                         >
                             <Edit className="h-4 w-4 mr-1" />
                             Edit
@@ -148,7 +149,7 @@ export function ReviewSubmission({ progress }: ReviewSubmissionProps) {
                             <div className="flex justify-between">
                                 <span className="text-muted-foreground">Logo:</span>
                                 <span className="font-medium">
-                                    {progress.companyBranding.logoFileId ? "Uploaded" : "Not uploaded"}
+                                    {progress.companyBranding.logoFileId ? "✓ Uploaded" : "Not uploaded"}
                                 </span>
                             </div>
                         </div>
@@ -157,6 +158,7 @@ export function ReviewSubmission({ progress }: ReviewSubmissionProps) {
                     )}
                 </div>
 
+                {/* Documents */}
                 <div className="rounded-lg border p-4">
                     <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-2">
@@ -167,6 +169,7 @@ export function ReviewSubmission({ progress }: ReviewSubmissionProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => router.push("/onboarding/step-5")}
+                            disabled={isSubmitting}
                         >
                             <Edit className="h-4 w-4 mr-1" />
                             Edit
@@ -207,11 +210,12 @@ export function ReviewSubmission({ progress }: ReviewSubmissionProps) {
                         type="button"
                         variant="outline"
                         onClick={() => router.push("/onboarding/step-5")}
+                        disabled={isSubmitting}
                     >
                         Back
                     </Button>
                     <Button
-                        onClick={handleSubmit}
+                        onClick={() => submit()}
                         disabled={!isComplete || isSubmitting}
                     >
                         {isSubmitting ? "Submitting..." : "Submit Application"}
@@ -219,5 +223,5 @@ export function ReviewSubmission({ progress }: ReviewSubmissionProps) {
                 </div>
             </CardContent>
         </Card>
-    )
+    );
 }

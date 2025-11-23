@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { saveCompanyAddress } from "@/lib/services/actions/onboarding.actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useAction } from "next-safe-action/hooks";
 
 interface CompanyAddressFormProps {
     initialData?: CompanyAddressInput;
@@ -30,19 +31,22 @@ export function CompanyAddressForm({ initialData }: CompanyAddressFormProps) {
         },
     });
 
-    async function onSubmit(data: CompanyAddressInput) {
-        try {
-            const result = await saveCompanyAddress(data);
-
-            if (result?.data?.success) {
+    const { execute: saveAddress, isExecuting: isSaving } = useAction(saveCompanyAddress, {
+        onSuccess: ({ data }) => {
+            if (data?.success) {
                 toast.success("Address saved!");
                 router.push("/onboarding/step-4");
-            } else if (result?.serverError) {
-                toast.error(result.serverError);
+            } else if (data?.error) {
+                toast.error(data.error);
             }
-        } catch (error) {
-            toast.error("Failed to save address");
-        }
+        },
+        onError: ({ error }) => {
+            toast.error(error.serverError || "Failed to save address");
+        },
+    });
+
+    function onSubmit(data: CompanyAddressInput) {
+        saveAddress(data);
     }
 
     return (
@@ -172,18 +176,19 @@ export function CompanyAddressForm({ initialData }: CompanyAddressFormProps) {
                             type="button"
                             variant="outline"
                             onClick={() => router.push("/onboarding/step-2")}
+                            disabled={isSaving}
                         >
                             Back
                         </Button>
                         <Button
                             type="submit"
-                            disabled={form.formState.isSubmitting}
+                            disabled={isSaving}
                         >
-                            {form.formState.isSubmitting ? "Saving..." : "Continue"}
+                            {isSaving ? "Saving..." : "Continue"}
                         </Button>
                     </div>
                 </form>
             </CardContent>
         </Card>
-    )
+    );
 }

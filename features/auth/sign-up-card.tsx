@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { useAction } from "next-safe-action/hooks";
 
 export function SignUpCard() {
     const [showPassword, setShowPassword] = useState(false);
@@ -27,32 +28,30 @@ export function SignUpCard() {
             phone: "",
             jobTitle: "",
         }
-    })
+    });
 
-    async function onSubmit(data: SignUpInput) {
-        try {
-            const result = await signUpAction(data);
-
-            console.log("nswhsnwhsw: ", result.data)
-
-            if (result?.data?.success) {
+    const { execute: signUp, isExecuting: isSigningUp } = useAction(signUpAction, {
+        onSuccess: ({ data }) => {
+            if (data?.success) {
                 toast.success("Account created successfully!", {
-                    description: "Please verify your email to continue.",
+                    description: "Please complete your company onboarding.",
                 });
                 router.push("/onboarding/step-2");
-            } else if (result.data?.error) {
+            } else if (data?.error) {
                 toast.error("Sign up failed", {
-                    description: result.data.error,
-                });
-            } else if (result?.serverError) {
-                toast.error("Sign up failed", {
-                    description: result.serverError,
+                    description: data.error,
                 });
             }
-        } catch (error) {
-            console.error("Sign up error:", error);
-            toast.error("An error occurred during sign up");
-        }
+        },
+        onError: ({ error }) => {
+            toast.error("Sign up failed", {
+                description: error.serverError || "An error occurred during sign up",
+            });
+        },
+    });
+
+    function onSubmit(data: SignUpInput) {
+        signUp(data);
     }
 
     return (
@@ -218,16 +217,16 @@ export function SignUpCard() {
                         type="submit"
                         form="sign-up-form"
                         className="w-full"
-                        disabled={form.formState.isSubmitting}
+                        disabled={isSigningUp}
                     >
-                        {form.formState.isSubmitting ? "Creating Account..." : "Create Account"}
+                        {isSigningUp ? "Creating Account..." : "Create Account"}
                     </Button>
 
                     <div className="flex items-center gap-3 before:h-px w-full before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
                         <span className="text-xs text-muted-foreground">Or</span>
                     </div>
 
-                    <Button variant="outline" type="button" className="w-full">
+                    <Button variant="outline" type="button" className="w-full" disabled={isSigningUp}>
                         <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
