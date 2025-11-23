@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import * as z from "zod"
 import { signInAction } from "@/lib/services/actions/auth.actions";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type SignInFormValues = z.infer<typeof signInFormSchema>
 
@@ -191,9 +192,11 @@ export function SignInCard() {
 
                     <p className="text-center text-sm text-muted-foreground">
                         Don&apos;t have an account?{" "}
-                        <Button variant="link" className="h-auto p-0 text-sm font-semibold">
-                            Sign up
-                        </Button>
+                        <Link href="/auth/sign-up">
+                            <Button variant="link" className="h-auto p-0 text-sm font-semibold">
+                                Sign up
+                            </Button>
+                        </Link>
                     </p>
                 </CardFooter>
             </Card>

@@ -1,6 +1,5 @@
 "use server";
 
-import { createSafeActionClient } from "next-safe-action";
 import { CompanyAdminModel } from "../models/company.model";
 import { revalidatePath } from "next/cache";
 import {
@@ -9,20 +8,11 @@ import {
   rejectCompanySchema,
   suspendCompanySchema,
 } from "@/lib/schemas/company-schemas";
-import { requireSuperAdmin } from "@/lib/access-control/permissions";
 import { AdminUsersService } from "../models/users.model";
 import { AdminTeamsService } from "../core/base-teams";
-
-const action = createSafeActionClient({
-  handleServerError: (error) => {
-    console.error("Action error:", error);
-    return error.message;
-  },
-});
+import { action, superAdminAction } from "@/lib/safe-action";
 
 export async function getDashboardStats() {
-  await requireSuperAdmin();
-
   const companyModel = new CompanyAdminModel();
   const stats = await companyModel.getStats();
   const recentApplications = await companyModel.getPendingApplications(5);
@@ -41,8 +31,6 @@ export async function getDashboardStats() {
 }
 
 export async function getCompanies(status?: string) {
-  await requireSuperAdmin();
-
   const companyModel = new CompanyAdminModel();
 
   const options = status
@@ -59,33 +47,31 @@ export async function getCompanies(status?: string) {
   });
 }
 
-export const approveCompanyAction = action
-  .schema(approveCompanySchema)
-  .action(async ({ parsedInput: { companyId } }) => {
-    const userContext = await requireSuperAdmin();
-
+export const approveCompanyAction = superAdminAction
+  .inputSchema(approveCompanySchema)
+  .action(async ({ parsedInput: { companyId }, ctx }) => {
     try {
       const companyModel = new CompanyAdminModel();
       const company = await companyModel.findById(companyId);
 
       if (!company) {
-        throw new Error("Company not found");
+        return { error: "Company not found" };
       }
 
       if (company.status !== "pending") {
-        throw new Error("Company is not pending approval");
+        return { error: "Company is not pending approval" };
       }
 
       const teamsService = new AdminTeamsService();
       const team = await teamsService.create({
-        name: company.name,
+        name: company.companyName,
         roles: ["owner"],
       });
 
       await companyModel.updateById(companyId, {
         status: "active",
         teamId: team.$id,
-        approvedBy: userContext.userId,
+        approvedBy: ctx.userId,
         approvedAt: new Date().toISOString(),
       });
 
@@ -106,17 +92,15 @@ export const approveCompanyAction = action
     }
   });
 
-export const rejectCompanyAction = action
-  .schema(rejectCompanySchema)
-  .action(async ({ parsedInput: { companyId, reason } }) => {
-    const userContext = await requireSuperAdmin();
-
+export const rejectCompanyAction = superAdminAction
+  .inputSchema(rejectCompanySchema)
+  .action(async ({ parsedInput: { companyId, reason }, ctx }) => {
     try {
       const companyModel = new CompanyAdminModel();
       const company = await companyModel.findById(companyId);
 
       if (!company) {
-        throw new Error("Company not found");
+        return { error: "Company not found" };
       }
 
       if (company.status !== "pending") {
@@ -125,7 +109,7 @@ export const rejectCompanyAction = action
 
       await companyModel.updateById(companyId, {
         status: "rejected",
-        rejectedBy: userContext.userId,
+        rejectedBy: ctx.userId,
         rejectedAt: new Date().toISOString(),
         rejectionReason: reason,
       });
@@ -147,20 +131,18 @@ export const rejectCompanyAction = action
   });
 
 export const suspendCompanyAction = action
-  .schema(suspendCompanySchema)
+  .inputSchema(suspendCompanySchema)
   .action(async ({ parsedInput: { companyId } }) => {
-    await requireSuperAdmin();
-
     try {
       const companyModel = new CompanyAdminModel();
       const company = await companyModel.findById(companyId);
 
       if (!company) {
-        throw new Error("Company not found");
+        return { error: "Company not found" };
       }
 
       if (company.status !== "active") {
-        throw new Error("Only active companies can be suspended");
+        return { error: "Only active companies can be suspended" };
       }
 
       await companyModel.updateById(companyId, {
@@ -183,21 +165,19 @@ export const suspendCompanyAction = action
     }
   });
 
-export const activateCompanyAction = action
+export const activateCompanyAction = superAdminAction
   .schema(activateCompanySchema)
   .action(async ({ parsedInput: { companyId } }) => {
-    await requireSuperAdmin();
-
     try {
       const companyModel = new CompanyAdminModel();
       const company = await companyModel.findById(companyId);
 
       if (!company) {
-        throw new Error("Company not found");
+        return { error: "Company not found" };
       }
 
       if (company.status !== "suspended") {
-        throw new Error("Only suspended companies can be activated");
+        return { error: "Only suspended companies can be activated" };
       }
 
       await companyModel.updateById(companyId, {

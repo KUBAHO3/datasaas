@@ -92,7 +92,7 @@ export class AdminUsersService extends AdminDBModel<UserData> {
   async createWithEmail(email: string, password: string, name?: string) {
     const client = await this.getClient();
     const { ID } = await import("node-appwrite");
-    return await client.users.create(ID.unique(), email, password, name);
+    return await client.users.create(ID.unique(), email, undefined, password, name);
   }
 
   async updateName(userId: string, name: string) {

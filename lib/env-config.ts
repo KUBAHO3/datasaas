@@ -7,3 +7,6 @@ export const DATABASE_ID = process.env.NEXT_PUBLIC_DATABASE_ID!
 
 export const COMPANIES_TABLE_ID = process.env.NEXT_PUBLIC_COMPANIES_TABLE_ID!
 export const USERS_TABLE_ID = process.env.NEXT_PUBLIC_USERS_TABLE_ID!
+
+export const ONBOARDING_TABLE_ID = process.env.NEXT_PUBLIC_ONBOARDING_TABLE_ID!;
+export const DOCUMENTS_BUCKET_ID = process.env.NEXT_PUBLIC_DOCUMENTS_BUCKET_ID!

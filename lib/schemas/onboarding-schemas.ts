@@ -1,0 +1,41 @@
+import { z } from "zod";
+
+export const companyBasicInfoSchema = z.object({
+  companyName: z.string().min(2, "Company name is required"),
+  industry: z.string().min(1, "Please select an industry"),
+  size: z.string().min(1, "Please select company size"),
+  website: z
+    .string()
+    .url("Please enter a valid URL")
+    .optional()
+    .or(z.literal("")),
+  phone: z.string().min(10, "Please enter a valid phone number"),
+  description: z.string().optional(),
+});
+
+export const companyAddressSchema = z.object({
+  street: z.string().min(5, "Street address is required"),
+  city: z.string().min(2, "City is required"),
+  state: z.string().min(2, "State/Province is required"),
+  country: z.string().min(2, "Country is required"),
+  zipCode: z.string().min(3, "Zip/Postal code is required"),
+});
+
+export const companyBrandingSchema = z.object({
+  taxId: z.string().min(5, "Tax ID/Business registration number is required"),
+  logoFileId: z.string().optional(),
+});
+
+export const documentsSchema = z.object({
+  businessRegistration: z
+    .string()
+    .min(1, "Business registration certificate is required"),
+  taxDocument: z.string().min(1, "Tax identification document is required"),
+  proofOfAddress: z.string().min(1, "Proof of address is required"),
+  certifications: z.array(z.string()).optional(),
+});
+
+export type CompanyBasicInfoInput = z.infer<typeof companyBasicInfoSchema>;
+export type CompanyAddressInput = z.infer<typeof companyAddressSchema>;
+export type CompanyBrandingInput = z.infer<typeof companyBrandingSchema>;
+export type DocumentsInput = z.infer<typeof documentsSchema>;

@@ -1,6 +1,5 @@
 "use server";
 
-import { createSafeActionClient } from "next-safe-action";
 import { signInFormSchema } from "@/lib/schemas/user-schema";
 import {
   AdminAccountService,
@@ -8,15 +7,10 @@ import {
 } from "../core/base-account";
 import { AdminUsersService, UserDataAdminModel } from "../models/users.model";
 import { redirect } from "next/navigation";
-
-const action = createSafeActionClient({
-  handleServerError: (error) => {
-    return error.message;
-  },
-});
+import { action, authAction } from "@/lib/safe-action";
 
 export const signInAction = action
-  .schema(signInFormSchema)
+  .inputSchema(signInFormSchema)
   .action(async ({ parsedInput: { email, password } }) => {
     try {
       const adminAccountService = new AdminAccountService();
@@ -48,9 +42,9 @@ export const signInAction = action
       };
     } catch (error) {
       console.error("Sign in error:", error);
-      throw new Error(
-        error instanceof Error ? error.message : "Invalid credentials"
-      );
+      return {
+        error: error instanceof Error ? error.message : "Invalid credentials",
+      };
     }
   });
 
@@ -77,17 +71,18 @@ export async function getCurrentUser() {
   }
 }
 
-export async function signOutAction() {
+export const signOutAction = authAction.action(async ({ ctx }) => {
   try {
     const sessionAccountService = new SessionAccountService();
     await sessionAccountService.deleteSession("current");
 
+    console.log(`Loggin Out user: `, ctx.email);
     return { success: true };
   } catch (error: any) {
     console.error("Sign out error:", error);
-    throw new Error("Failed to sign out");
+    return { error: "Failed to sign out" };
   }
-}
+});
 
 export async function checkIsSuperAdmin(userId: string): Promise<boolean> {
   try {
@@ -104,7 +99,7 @@ export async function verifySuperAdmin() {
   const user = await getCurrentUser();
 
   if (!user || !user.isSuperAdmin) {
-    console.log(`User ${user?.email} is not super admin`)
+    console.log(`User ${user?.email} is not super admin`);
     redirect("/auth/sign-in");
   }
 

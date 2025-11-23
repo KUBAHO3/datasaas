@@ -1,0 +1,252 @@
+"use client"
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { SignUpInput, signUpSchema } from "@/lib/schemas/user-schema";
+import { signUpAction } from "@/lib/services/actions/onboarding.actions";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Briefcase, Eye, EyeOff, Lock, MailIcon, Phone, User } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { toast } from "sonner";
+
+export function SignUpCard() {
+    const [showPassword, setShowPassword] = useState(false);
+    const router = useRouter();
+
+    const form = useForm<SignUpInput>({
+        resolver: zodResolver(signUpSchema),
+        defaultValues: {
+            name: "",
+            email: "",
+            password: "",
+            phone: "",
+            jobTitle: "",
+        }
+    })
+
+    async function onSubmit(data: SignUpInput) {
+        try {
+            const result = await signUpAction(data);
+
+            console.log("nswhsnwhsw: ", result.data)
+
+            if (result?.data?.success) {
+                toast.success("Account created successfully!", {
+                    description: "Please verify your email to continue.",
+                });
+                router.push("/onboarding/step-2");
+            } else if (result.data?.error) {
+                toast.error("Sign up failed", {
+                    description: result.data.error,
+                });
+            } else if (result?.serverError) {
+                toast.error("Sign up failed", {
+                    description: result.serverError,
+                });
+            }
+        } catch (error) {
+            console.error("Sign up error:", error);
+            toast.error("An error occurred during sign up");
+        }
+    }
+
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
+            <Card className="w-full sm:max-w-2xl shadow-lg">
+                <CardHeader className="space-y-1">
+                    <CardTitle className="text-2xl font-bold">Create Account</CardTitle>
+                    <CardDescription>
+                        Start your company onboarding journey
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <form
+                        id="sign-up-form"
+                        onSubmit={form.handleSubmit(onSubmit)}
+                    >
+                        <FieldGroup>
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <Controller
+                                    name="name"
+                                    control={form.control}
+                                    render={({ field, fieldState }) => (
+                                        <Field data-invalid={fieldState.invalid}>
+                                            <FieldLabel htmlFor="name">Full Name</FieldLabel>
+                                            <InputGroup>
+                                                <InputGroupInput
+                                                    {...field}
+                                                    type="text"
+                                                    placeholder="John Doe"
+                                                    id="name"
+                                                    aria-invalid={fieldState.invalid}
+                                                />
+                                                <InputGroupAddon>
+                                                    <User />
+                                                </InputGroupAddon>
+                                            </InputGroup>
+                                            {fieldState.invalid && (
+                                                <FieldError errors={[fieldState.error]} />
+                                            )}
+                                        </Field>
+                                    )}
+                                />
+
+                                <Controller
+                                    name="jobTitle"
+                                    control={form.control}
+                                    render={({ field, fieldState }) => (
+                                        <Field data-invalid={fieldState.invalid}>
+                                            <FieldLabel htmlFor="jobTitle">Job Title</FieldLabel>
+                                            <InputGroup>
+                                                <InputGroupInput
+                                                    {...field}
+                                                    type="text"
+                                                    placeholder="CEO, Manager, etc."
+                                                    id="jobTitle"
+                                                    aria-invalid={fieldState.invalid}
+                                                />
+                                                <InputGroupAddon>
+                                                    <Briefcase />
+                                                </InputGroupAddon>
+                                            </InputGroup>
+                                            {fieldState.invalid && (
+                                                <FieldError errors={[fieldState.error]} />
+                                            )}
+                                        </Field>
+                                    )}
+                                />
+                            </div>
+
+                            <Controller
+                                name="email"
+                                control={form.control}
+                                render={({ field, fieldState }) => (
+                                    <Field data-invalid={fieldState.invalid}>
+                                        <FieldLabel htmlFor="email">Email Address</FieldLabel>
+                                        <InputGroup>
+                                            <InputGroupInput
+                                                {...field}
+                                                type="email"
+                                                placeholder="john@company.com"
+                                                id="email"
+                                                aria-invalid={fieldState.invalid}
+                                                autoComplete="email"
+                                            />
+                                            <InputGroupAddon>
+                                                <MailIcon />
+                                            </InputGroupAddon>
+                                        </InputGroup>
+                                        {fieldState.invalid && (
+                                            <FieldError errors={[fieldState.error]} />
+                                        )}
+                                    </Field>
+                                )}
+                            />
+
+                            <Controller
+                                name="phone"
+                                control={form.control}
+                                render={({ field, fieldState }) => (
+                                    <Field data-invalid={fieldState.invalid}>
+                                        <FieldLabel htmlFor="phone">Phone Number</FieldLabel>
+                                        <InputGroup>
+                                            <InputGroupInput
+                                                {...field}
+                                                type="tel"
+                                                placeholder="+1 (555) 123-4567"
+                                                id="phone"
+                                                aria-invalid={fieldState.invalid}
+                                            />
+                                            <InputGroupAddon>
+                                                <Phone />
+                                            </InputGroupAddon>
+                                        </InputGroup>
+                                        {fieldState.invalid && (
+                                            <FieldError errors={[fieldState.error]} />
+                                        )}
+                                    </Field>
+                                )}
+                            />
+
+                            <Controller
+                                name="password"
+                                control={form.control}
+                                render={({ field, fieldState }) => (
+                                    <Field data-invalid={fieldState.invalid}>
+                                        <FieldLabel htmlFor="password">Password</FieldLabel>
+                                        <InputGroup>
+                                            <InputGroupAddon>
+                                                <Lock className="h-4 w-4 text-muted-foreground" />
+                                            </InputGroupAddon>
+                                            <InputGroupInput
+                                                {...field}
+                                                id="password"
+                                                type={showPassword ? "text" : "password"}
+                                                aria-invalid={fieldState.invalid}
+                                                placeholder="••••••••"
+                                                autoComplete="new-password"
+                                            />
+                                            <InputGroupAddon align={'inline-end'}>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0"
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                >
+                                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                                </Button>
+                                            </InputGroupAddon>
+                                        </InputGroup>
+                                        {fieldState.invalid && (
+                                            <FieldError errors={[fieldState.error]} />
+                                        )}
+                                    </Field>
+                                )}
+                            />
+                        </FieldGroup>
+                    </form>
+                </CardContent>
+
+                <CardFooter className="flex flex-col gap-4">
+                    <Button
+                        type="submit"
+                        form="sign-up-form"
+                        className="w-full"
+                        disabled={form.formState.isSubmitting}
+                    >
+                        {form.formState.isSubmitting ? "Creating Account..." : "Create Account"}
+                    </Button>
+
+                    <div className="flex items-center gap-3 before:h-px w-full before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
+                        <span className="text-xs text-muted-foreground">Or</span>
+                    </div>
+
+                    <Button variant="outline" type="button" className="w-full">
+                        <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                        </svg>
+                        Continue with Google
+                    </Button>
+
+                    <p className="text-center text-sm text-muted-foreground">
+                        Already have an account?{" "}
+                        <Link href="/auth/sign-in">
+                            <Button variant="link" className="h-auto p-0 text-sm font-semibold">
+                                Sign in
+                            </Button>
+                        </Link>
+                    </p>
+                </CardFooter>
+            </Card>
+        </div>
+    )
+}
