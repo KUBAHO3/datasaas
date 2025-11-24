@@ -57,13 +57,14 @@ export class AdminUsersService extends AdminDBModel<UserData> {
 
   async searchByEmail(email: string) {
     const client = await this.getClient();
-    const queries = [Query.search("email", email)];
-    return await client.users.list(queries);
+    const queries = [Query.equal("email", [email])];
+    const results = await client.users.list(queries);
+    return results;
   }
 
   async searchByName(name: string) {
     const client = await this.getClient();
-    const queries = [Query.search("name", name)];
+    const queries = [Query.equal("name", [name])];
     return await client.users.list(queries);
   }
 
@@ -92,7 +93,13 @@ export class AdminUsersService extends AdminDBModel<UserData> {
   async createWithEmail(email: string, password: string, name?: string) {
     const client = await this.getClient();
     const { ID } = await import("node-appwrite");
-    return await client.users.create(ID.unique(), email, undefined, password, name);
+    return await client.users.create(
+      ID.unique(),
+      email,
+      undefined,
+      password,
+      name
+    );
   }
 
   async updateName(userId: string, name: string) {

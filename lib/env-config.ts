@@ -1,5 +1,7 @@
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL!
 export const MAIN_DOMAIN = process.env.NEXT_PUBLIC_MAIN_DOMAIN! || "datasaas.com"
+export const RESEND_MAIL_API_KEY = process.env.RESEND_MAIL_API_KEY!
+export const EMAIL_FROM = process.env.EMAIL_FROM!
 
 export const APPWRITE_ENDPOINT = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT!
 export const APPWRITE_PROJECT_ID = process.env.NEXT_PUBLIC_APPWRITE_PROJECT!

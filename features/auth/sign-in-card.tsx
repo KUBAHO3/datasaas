@@ -145,13 +145,15 @@ export function SignInCard() {
                         </FieldGroup>
 
                         <div className="mt-4 flex items-center justify-between">
-                            <Button
-                                type="button"
-                                variant="link"
-                                className="h-auto ml-auto p-0 text-sm"
-                            >
-                                Forgot password?
-                            </Button>
+                            <Link href="/auth/forgot-password">
+                                <Button
+                                    type="button"
+                                    variant="link"
+                                    className="h-auto ml-auto p-0 text-sm"
+                                >
+                                    Forgot password?
+                                </Button>
+                            </Link>
                         </div>
                     </form>
                 </CardContent>
