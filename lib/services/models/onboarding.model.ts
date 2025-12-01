@@ -1,16 +1,26 @@
 import { DATABASE_ID, ONBOARDING_TABLE_ID } from "@/lib/env-config";
 import { AdminDBModel, SessionDBModel } from "../core/base-db-model";
-import { OnboardingProgress } from "@/lib/types/onboarding-types";
+import {
+  OnboardingProgress,
+  OnboardingProgressWithArrays,
+  OnboardingHelpers,
+} from "@/lib/types/onboarding-types";
 
 export class OnboardingSessionModel extends SessionDBModel<OnboardingProgress> {
   constructor() {
     super(DATABASE_ID, ONBOARDING_TABLE_ID);
   }
 
-  async findByUserId(userId: string): Promise<OnboardingProgress | null> {
-    return this.findOne({
+  async findByUserId(
+    userId: string
+  ): Promise<OnboardingProgressWithArrays | null> {
+    const progress = await this.findOne({
       where: [{ field: "userId", operator: "equals", value: userId }],
     });
+
+    if (!progress) return null;
+
+    return OnboardingHelpers.fromDB(progress);
   }
 }
 
@@ -19,14 +29,20 @@ export class OnboardingAdminModel extends AdminDBModel<OnboardingProgress> {
     super(DATABASE_ID, ONBOARDING_TABLE_ID);
   }
 
-  async findByUserId(userId: string): Promise<OnboardingProgress | null> {
-    return this.findOne({
+  async findByUserId(
+    userId: string
+  ): Promise<OnboardingProgressWithArrays | null> {
+    const progress = await this.findOne({
       where: [{ field: "userId", operator: "equals", value: userId }],
     });
+
+    if (!progress) return null;
+
+    return OnboardingHelpers.fromDB(progress);
   }
 
-  async createProgress(userId: string): Promise<OnboardingProgress> {
-    return this.create(
+  async createProgress(userId: string): Promise<OnboardingProgressWithArrays> {
+    const dbProgress = await this.create(
       {
         userId,
         currentStep: 2,
@@ -35,12 +51,20 @@ export class OnboardingAdminModel extends AdminDBModel<OnboardingProgress> {
       },
       userId
     );
+
+    return OnboardingHelpers.fromDB(dbProgress);
   }
 
   async updateProgress(
     userId: string,
-    data: Partial<OnboardingProgress>
-  ): Promise<OnboardingProgress> {
-    return this.updateById(userId, data);
+    data: Partial<OnboardingProgressWithArrays>
+  ): Promise<OnboardingProgressWithArrays> {
+    // Convert arrays to strings for DB
+    const dbData = OnboardingHelpers.toDB(data);
+
+    const updated = await this.updateById(userId, dbData);
+
+    // Convert back to app format
+    return OnboardingHelpers.fromDB(updated);
   }
 }

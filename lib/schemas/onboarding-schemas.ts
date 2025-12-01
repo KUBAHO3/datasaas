@@ -27,12 +27,14 @@ export const companyBrandingSchema = z.object({
 });
 
 export const documentsSchema = z.object({
-  businessRegistration: z
+  businessRegistrationFileId: z
     .string()
     .min(1, "Business registration certificate is required"),
-  taxDocument: z.string().min(1, "Tax identification document is required"),
-  proofOfAddress: z.string().min(1, "Proof of address is required"),
-  certifications: z.array(z.string()).optional(),
+  taxDocumentFileId: z
+    .string()
+    .min(1, "Tax identification document is required"),
+  proofOfAddressFileId: z.string().min(1, "Proof of address is required"),
+  certificationsFileIds: z.array(z.string()).optional(),
 });
 
 export type CompanyBasicInfoInput = z.infer<typeof companyBasicInfoSchema>;

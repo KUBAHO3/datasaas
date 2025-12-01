@@ -67,10 +67,6 @@ export const signUpAction = action
         parsedInput.name
       );
 
-      // if (parsedInput.phone) {
-      //   await adminUsersService.updatePhone(user.$id, parsedInput.phone);
-      // }
-
       const userDataModel = new UserDataAdminModel();
       await userDataModel.createUserData(user.$id, {
         name: parsedInput.name,
@@ -109,7 +105,12 @@ export const saveCompanyBasicInfo = authAction
       const onboardingModel = new OnboardingAdminModel();
 
       await onboardingModel.updateProgress(ctx.userId, {
-        companyBasicInfo: parsedInput,
+        companyName: parsedInput.companyName,
+        industry: parsedInput.industry,
+        size: parsedInput.size,
+        website: parsedInput.website,
+        phone: parsedInput.phone,
+        description: parsedInput.description,
         currentStep: 3,
         completedSteps: [1, 2],
       });
@@ -135,7 +136,12 @@ export const saveCompanyAddress = authAction
       const onboardingModel = new OnboardingAdminModel();
 
       await onboardingModel.updateProgress(ctx.userId, {
-        companyAddress: parsedInput,
+        // Flatten the data - no nested objects
+        street: parsedInput.street,
+        city: parsedInput.city,
+        state: parsedInput.state,
+        country: parsedInput.country,
+        zipCode: parsedInput.zipCode,
         currentStep: 4,
         completedSteps: [1, 2, 3],
       });
@@ -161,7 +167,9 @@ export const saveCompanyBranding = authAction
       const onboardingModel = new OnboardingAdminModel();
 
       await onboardingModel.updateProgress(ctx.userId, {
-        companyBranding: parsedInput,
+        // Flatten the data - no nested objects
+        taxId: parsedInput.taxId,
+        logoFileId: parsedInput.logoFileId,
         currentStep: 5,
         completedSteps: [1, 2, 3, 4],
       });
@@ -187,7 +195,10 @@ export const saveDocuments = authAction
       const onboardingModel = new OnboardingAdminModel();
 
       await onboardingModel.updateProgress(ctx.userId, {
-        documents: parsedInput,
+        businessRegistrationFileId: parsedInput.businessRegistrationFileId,
+        taxDocumentFileId: parsedInput.taxDocumentFileId,
+        proofOfAddressFileId: parsedInput.proofOfAddressFileId,
+        certificationsFileIds: parsedInput.certificationsFileIds,
         currentStep: 6,
         completedSteps: [1, 2, 3, 4, 5],
       });
@@ -213,30 +224,40 @@ export const submitOnboarding = authAction.action(async ({ ctx }) => {
       return { error: "Onboarding progress not found" };
     }
 
+    // Check that all required fields are filled
     if (
-      !progress.companyBasicInfo ||
-      !progress.companyAddress ||
-      !progress.companyBranding ||
-      !progress.documents
+      !progress.companyName ||
+      !progress.industry ||
+      !progress.size ||
+      !progress.phone ||
+      !progress.street ||
+      !progress.city ||
+      !progress.state ||
+      !progress.country ||
+      !progress.zipCode ||
+      !progress.taxId ||
+      !progress.businessRegistrationFileId ||
+      !progress.taxDocumentFileId ||
+      !progress.proofOfAddressFileId
     ) {
       return { error: "Please complete all steps before submitting" };
     }
 
     const companyModel = new CompanyAdminModel();
     const company = await companyModel.create({
-      name: progress.companyBasicInfo.companyName,
+      name: progress.companyName,
       email: ctx.email,
-      phone: progress.companyBasicInfo.phone,
-      website: progress.companyBasicInfo.website,
-      industry: progress.companyBasicInfo.industry,
-      size: progress.companyBasicInfo.size,
-      description: progress.companyBasicInfo.description,
-      address: progress.companyAddress.street,
-      city: progress.companyAddress.city,
-      state: progress.companyAddress.state,
-      country: progress.companyAddress.country,
-      zipCode: progress.companyAddress.zipCode,
-      logo: progress.companyBranding.logoFileId,
+      phone: progress.phone,
+      website: progress.website,
+      industry: progress.industry,
+      size: progress.size,
+      description: progress.description,
+      address: progress.street,
+      city: progress.city,
+      state: progress.state,
+      country: progress.country,
+      zipCode: progress.zipCode,
+      logo: progress.logoFileId,
       status: "pending",
       createdBy: ctx.userId,
     });
@@ -248,12 +269,15 @@ export const submitOnboarding = authAction.action(async ({ ctx }) => {
     });
 
     const userDataModel = new UserDataAdminModel();
-    await userDataModel.updateById(ctx.userId, {
-      companyId: company.$id,
-    });
+    const userData = await userDataModel.findByUserId(ctx.userId);
+    if (userData) {
+      await userDataModel.updateById(userData.$id, {
+        companyId: company.$id,
+      });
+    }
 
     revalidatePath("/onboarding");
-    revalidatePath("/pending-approval");
+    revalidatePath("/onboarding/pending-approval");
 
     return {
       success: true,
@@ -265,69 +289,6 @@ export const submitOnboarding = authAction.action(async ({ ctx }) => {
     return {
       error:
         error instanceof Error ? error.message : "Failed to submit application",
-    };
-  }
-});
-
-export const resubmitOnboarding = authAction.action(async ({ ctx }) => {
-  try {
-    const onboardingModel = new OnboardingAdminModel();
-    const progress = await onboardingModel.findByUserId(ctx.userId);
-
-    if (!progress) {
-      return { error: "Onboarding progress not found" };
-    }
-
-    if (progress.status !== "rejected") {
-      return { error: "Can only resubmit rejected applications" };
-    }
-
-    if (
-      !progress.companyBasicInfo ||
-      !progress.companyAddress ||
-      !progress.companyBranding ||
-      !progress.documents
-    ) {
-      return { error: "Please complete all steps before resubmitting" };
-    }
-
-    const companyModel = new CompanyAdminModel();
-
-    const existingCompany = await companyModel.findOne({
-      where: [{ field: "createdBy", operator: "equals", value: ctx.userId }],
-    });
-
-    if (!existingCompany) {
-      return { error: "Company record not found" };
-    }
-
-    await companyModel.updateById(existingCompany.$id, {
-      status: "pending",
-      rejectedBy: undefined,
-      rejectedAt: undefined,
-      rejectionReason: undefined,
-    });
-
-    await onboardingModel.updateProgress(ctx.userId, {
-      status: "submitted",
-    });
-
-    revalidatePath("/onboarding");
-    revalidatePath("/onboarding/pending-approval");
-    revalidatePath("/admin/companies");
-
-    return {
-      success: true,
-      message: "Application resubmitted successfully",
-      companyId: existingCompany.$id,
-    };
-  } catch (error) {
-    console.error("Resubmit onboarding error:", error);
-    return {
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to resubmit application",
     };
   }
 });

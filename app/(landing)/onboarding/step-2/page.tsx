@@ -12,5 +12,14 @@ export default async function Step2Page() {
         redirect(`/onboarding/step-${progress.currentStep}`);
     }
 
-    return <CompanyBasicInfoForm initialData={progress.companyBasicInfo} />;
+    const initialData = {
+        companyName: progress.companyName || "",
+        industry: progress.industry || "",
+        size: progress.size || "",
+        website: progress.website || "",
+        phone: progress.phone || "",
+        description: progress.description || "",
+    };
+
+    return <CompanyBasicInfoForm initialData={initialData} />;
 }
