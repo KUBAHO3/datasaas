@@ -11,7 +11,7 @@ export default async function PendingApprovalPage() {
         redirect('/onboarding');
     }
 
-    if (progress.status === 'approved') {
+    if (progress.status === 'approved' as string) {
         redirect('/dashboard');
     }
 
