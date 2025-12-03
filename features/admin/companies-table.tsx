@@ -1,304 +1,210 @@
-"use client"
+"use client";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
+import Link from "next/link";
+import { Building2, Eye, MoreHorizontal } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-    CheckCircle2,
-    XCircle,
-    Ban,
-    PlayCircle,
-    MoreVertical,
-    Building2
-} from "lucide-react";
-import { useState, useTransition } from "react";
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 import {
-    approveCompanyAction,
-    rejectCompanyAction,
-    suspendCompanyAction,
-    activateCompanyAction
-} from "@/lib/services/actions/company.actions";
-import { toast } from "sonner";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { Textarea } from "@/components/ui/textarea";
-import { format } from "date-fns";
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Company } from "@/lib/types/company-types";
+import { BulkOperations } from "./bulk-operations";
+import EditCompanyDialog from "./edit-company-dialog";
+import DeleteCompanyDialog from "./delete-company-dialog";
 
 interface CompaniesTableProps {
     companies: Company[];
-    highlightId?: string;
 }
 
-export function CompaniesTable({ companies, highlightId }: CompaniesTableProps) {
-    const [isPending, startTransition] = useTransition();
-    const [showRejectDialog, setShowRejectDialog] = useState(false);
-    const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
-    const [rejectionReason, setRejectionReason] = useState("");
+export function CompaniesTable({ companies }: CompaniesTableProps) {
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-    async function handleApprove(companyId: string) {
-        startTransition(async () => {
-            const result = await approveCompanyAction({ companyId });
-
-            if (result?.data?.success) {
-                toast.success(result.data.message);
-            } else if (result?.serverError) {
-                toast.error(result.serverError);
-            }
-        });
-    }
-
-    async function handleReject() {
-        if (!selectedCompany || !rejectionReason.trim()) {
-            toast.error("Please provide a rejection reason");
-            return;
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case "active":
+                return "bg-green-100 text-green-800";
+            case "pending":
+                return "bg-yellow-100 text-yellow-800";
+            case "suspended":
+                return "bg-orange-100 text-orange-800";
+            case "rejected":
+                return "bg-red-100 text-red-800";
+            default:
+                return "bg-gray-100 text-gray-800";
         }
-
-        startTransition(async () => {
-            const result = await rejectCompanyAction({
-                companyId: selectedCompany.$id,
-                reason: rejectionReason
-            });
-
-            if (result?.data?.success) {
-                toast.success(result.data.message);
-                setShowRejectDialog(false);
-                setSelectedCompany(null);
-                setRejectionReason("");
-            } else if (result?.serverError) {
-                toast.error(result.serverError);
-            }
-        });
-    }
-
-    async function handleSuspend(companyId: string) {
-        startTransition(async () => {
-            const result = await suspendCompanyAction({ companyId });
-
-            if (result?.data?.success) {
-                toast.success(result.data.message);
-            } else if (result?.serverError) {
-                toast.error(result.serverError);
-            }
-        });
-    }
-
-    async function handleActivate(companyId: string) {
-        startTransition(async () => {
-            const result = await activateCompanyAction({ companyId });
-
-            if (result?.data?.success) {
-                toast.success(result.data.message);
-            } else if (result?.serverError) {
-                toast.error(result.serverError);
-            }
-        });
-    }
-
-    function openRejectDialog(company: Company) {
-        setSelectedCompany(company);
-        setShowRejectDialog(true);
-    }
-
-    const getStatusBadge = (status: Company['status']) => {
-        const styles = {
-            pending: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
-            active: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-            suspended: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
-            rejected: "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300",
-        };
-
-        return (
-            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status]}`}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-            </span>
-        );
     };
 
-    if (companies.length === 0) {
-        return (
-            <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                    <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium">No companies found</p>
-                    <p className="text-sm text-muted-foreground">
-                        Try adjusting your filters or check back later
-                    </p>
-                </CardContent>
-            </Card>
-        );
-    }
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            // Only select pending companies for bulk operations
+            const pendingIds = companies
+                .filter((c) => c.status === "pending")
+                .map((c) => c.$id);
+            setSelectedIds(pendingIds);
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelectCompany = (companyId: string, checked: boolean) => {
+        if (checked) {
+            setSelectedIds((prev) => [...prev, companyId]);
+        } else {
+            setSelectedIds((prev) => prev.filter((id) => id !== companyId));
+        }
+    };
+
+    const clearSelection = () => {
+        setSelectedIds([]);
+    };
+
+    const pendingCompanies = companies.filter((c) => c.status === "pending");
+    const allPendingSelected =
+        pendingCompanies.length > 0 &&
+        pendingCompanies.every((c) => selectedIds.includes(c.$id));
+    const somePendingSelected =
+        selectedIds.length > 0 && !allPendingSelected;
 
     return (
-        <>
-            <Card>
-                <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="border-b bg-muted/50">
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                                        Company
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                                        Contact
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                                        Industry
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                                        Status
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                                        Applied
-                                    </th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">
-                                        Actions
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {companies.map((company) => (
-                                    <tr
+        <div className="space-y-4">
+            {selectedIds.length > 0 && (
+                <BulkOperations
+                    selectedCompanyIds={selectedIds}
+                    onComplete={clearSelection}
+                />
+            )}
+
+            <div className="rounded-md border">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-12">
+                                <Checkbox
+                                    checked={allPendingSelected}
+                                    onCheckedChange={handleSelectAll}
+                                    aria-label="Select all pending companies"
+                                    className={somePendingSelected ? "data-[state=checked]:bg-primary" : ""}
+                                />
+                            </TableHead>
+                            <TableHead>Company</TableHead>
+                            <TableHead>Industry</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Created</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {companies.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center h-24">
+                                    <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                                        <Building2 className="h-8 w-8" />
+                                        <p>No companies found</p>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            companies.map((company) => {
+                                const isSelected = selectedIds.includes(company.$id);
+                                const canSelect = company.status === "pending";
+
+                                return (
+                                    <TableRow
                                         key={company.$id}
-                                        className={`hover:bg-muted/50 transition-colors ${highlightId === company.$id ? 'bg-primary/5' : ''
-                                            }`}
+                                        className={isSelected ? "bg-muted/50" : ""}
                                     >
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col">
-                                                <span className="font-medium">{company.name}</span>
-                                                {company.website && (
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {company.website}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col text-sm">
-                                                <span>{company.email}</span>
-                                                {company.phone && (
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {company.phone}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm">
-                                            {company.industry || 'N/A'}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {getStatusBadge(company.status)}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-muted-foreground">
-                                            {format(new Date(company.$createdAt), 'MMM d, yyyy')}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex justify-end gap-2">
-                                                {company.status === 'pending' && (
-                                                    <>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => handleApprove(company.$id)}
-                                                            disabled={isPending}
-                                                        >
-                                                            <CheckCircle2 className="h-4 w-4 mr-1" />
-                                                            Approve
+                                        <TableCell>
+                                            <Checkbox
+                                                checked={isSelected}
+                                                onCheckedChange={(checked) =>
+                                                    handleSelectCompany(company.$id, checked as boolean)
+                                                }
+                                                disabled={!canSelect}
+                                                aria-label={`Select ${company.companyName}`}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="font-medium">{company.companyName}</div>
+                                            {company.email && (
+                                                <div className="text-sm text-muted-foreground">
+                                                    {company.email}
+                                                </div>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className="text-sm">
+                                                {company.industry || "—"}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge
+                                                variant="secondary"
+                                                className={getStatusColor(company.status)}
+                                            >
+                                                {company.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className="text-sm text-muted-foreground">
+                                                {new Date(company.$createdAt).toLocaleDateString()}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <Button variant="ghost" size="sm" asChild>
+                                                    <Link href={`/admin/companies/${company.$id}`}>
+                                                        <Eye className="h-4 w-4 mr-2" />
+                                                        View
+                                                    </Link>
+                                                </Button>
+
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="sm">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                            <span className="sr-only">More actions</span>
                                                         </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() => openRejectDialog(company)}
-                                                            disabled={isPending}
-                                                        >
-                                                            <XCircle className="h-4 w-4 mr-1" />
-                                                            Reject
-                                                        </Button>
-                                                    </>
-                                                )}
-
-                                                {company.status === 'active' && (
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => handleSuspend(company.$id)}
-                                                        disabled={isPending}
-                                                    >
-                                                        <Ban className="h-4 w-4 mr-1" />
-                                                        Suspend
-                                                    </Button>
-                                                )}
-
-                                                {company.status === 'suspended' && (
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        onClick={() => handleActivate(company.$id)}
-                                                        disabled={isPending}
-                                                    >
-                                                        <PlayCircle className="h-4 w-4 mr-1" />
-                                                        Activate
-                                                    </Button>
-                                                )}
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem asChild>
+                                                            <div className="cursor-pointer">
+                                                                <EditCompanyDialog company={company} />
+                                                            </div>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem asChild>
+                                                            <div className="cursor-pointer">
+                                                                <DeleteCompanyDialog company={company} />
+                                                            </div>
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Reject Company Application</DialogTitle>
-                        <DialogDescription>
-                            Please provide a reason for rejecting {selectedCompany?.name}&apos;s application.
-                            This will be recorded in the system.
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <Field>
-                        <FieldLabel>Rejection Reason</FieldLabel>
-                        <Textarea
-                            value={rejectionReason}
-                            onChange={(e) => setRejectionReason(e.target.value)}
-                            placeholder="Enter the reason for rejection..."
-                            rows={4}
-                        />
-                    </Field>
-
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => {
-                                setShowRejectDialog(false);
-                                setSelectedCompany(null);
-                                setRejectionReason("");
-                            }}
-                            disabled={isPending}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={handleReject}
-                            disabled={isPending || !rejectionReason.trim()}
-                        >
-                            {isPending ? "Rejecting..." : "Reject Application"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+        </div>
     );
 }

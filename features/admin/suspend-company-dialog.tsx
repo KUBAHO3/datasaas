@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AlertTriangle, Loader2, XCircle } from "lucide-react";
+import { AlertTriangle, Loader2, PauseCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAction } from "next-safe-action/hooks";
 
@@ -20,33 +20,33 @@ import {
 import { Field, FieldError } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { rejectCompanySchema } from "@/lib/schemas/company-schemas";
-import { rejectCompanyAction } from "@/lib/services/actions/company.actions";
+import { suspendCompanySchema } from "@/lib/schemas/company-schemas";
+import { suspendCompanyAction } from "@/lib/services/actions/company.actions";
 import { Company } from "@/lib/types/company-types";
 import * as z from "zod";
 import { Label } from "@/components/ui/label";
 
-interface RejectCompanyDialogProps {
+interface SuspendCompanyDialogProps {
     company: Company;
 }
 
-type RejectFormData = z.infer<typeof rejectCompanySchema>;
+type SuspendFormData = z.infer<typeof suspendCompanySchema>;
 
-export default function RejectCompanyDialog({ company }: RejectCompanyDialogProps) {
+export function SuspendCompanyDialog({ company }: SuspendCompanyDialogProps) {
     const [open, setOpen] = useState(false);
 
-    const form = useForm<RejectFormData>({
-        resolver: zodResolver(rejectCompanySchema),
+    const form = useForm<SuspendFormData>({
+        resolver: zodResolver(suspendCompanySchema),
         defaultValues: {
             companyId: company.$id,
             reason: "",
         },
     });
 
-    const { execute, status } = useAction(rejectCompanyAction, {
+    const { execute, status } = useAction(suspendCompanyAction, {
         onSuccess: ({ data }) => {
             if (data?.success) {
-                toast.success(data.message || "Company rejected successfully");
+                toast.success(data.message || "Company suspended successfully");
                 setOpen(false);
                 form.reset();
             } else if (data?.error) {
@@ -54,45 +54,46 @@ export default function RejectCompanyDialog({ company }: RejectCompanyDialogProp
             }
         },
         onError: () => {
-            toast.error("Failed to reject company");
+            toast.error("Failed to suspend company");
         },
     });
 
-    const onSubmit = (data: RejectFormData) => {
+    const onSubmit = (data: SuspendFormData) => {
         execute(data);
     };
 
     const isLoading = status === "executing";
-    const canReject = company.status === "pending";
+    const canSuspend = company.status === "active";
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button
-                    variant="destructive"
+                    variant="outline"
                     size="sm"
-                    disabled={!canReject}
+                    disabled={!canSuspend}
+                    className="border-orange-200 text-orange-700 hover:bg-orange-50"
                 >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Reject
+                    <PauseCircle className="h-4 w-4 mr-2" />
+                    Suspend
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-destructive">
+                    <DialogTitle className="flex items-center gap-2 text-orange-600">
                         <AlertTriangle className="h-5 w-5" />
-                        Reject Company Application
+                        Suspend Company
                     </DialogTitle>
                     <DialogDescription>
-                        Reject this company's application with a detailed reason.
+                        Temporarily suspend this company's access to the platform.
                     </DialogDescription>
                 </DialogHeader>
 
-                {!canReject && (
+                {!canSuspend && (
                     <Alert variant="destructive">
                         <AlertTriangle className="h-4 w-4" />
                         <AlertDescription>
-                            Only pending companies can be rejected. Current status:{" "}
+                            Only active companies can be suspended. Current status:{" "}
                             <strong>{company.status}</strong>
                         </AlertDescription>
                     </Alert>
@@ -105,29 +106,29 @@ export default function RejectCompanyDialog({ company }: RejectCompanyDialogProp
                         </div>
                         <div className="text-sm">
                             <span className="font-medium">Current Status:</span>{" "}
-                            <span className="text-yellow-600">{company.status}</span>
+                            <span className="text-green-600">{company.status}</span>
                         </div>
                     </div>
 
-                    <Alert variant="destructive">
+                    <Alert>
                         <AlertTriangle className="h-4 w-4" />
                         <AlertDescription className="space-y-2">
-                            <p className="font-medium">Rejecting will:</p>
+                            <p className="font-medium">Suspending will:</p>
                             <ul className="list-disc list-inside text-sm space-y-1 ml-2">
-                                <li>Deny platform access</li>
-                                <li>Send rejection email with your reason</li>
-                                <li>Allow company to reapply later</li>
-                                <li>Set status to "rejected"</li>
+                                <li>Immediately block all company access</li>
+                                <li>Prevent team members from logging in</li>
+                                <li>Preserve all data (no data loss)</li>
+                                <li>Send suspension notification email</li>
                             </ul>
                         </AlertDescription>
                     </Alert>
 
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                         <Field>
-                            <Label htmlFor="reason">Rejection Reason *</Label>
+                            <Label htmlFor="reason">Suspension Reason *</Label>
                             <Textarea
                                 id="reason"
-                                placeholder="Provide a clear and professional reason for rejection..."
+                                placeholder="Provide a detailed reason for suspension..."
                                 rows={4}
                                 {...form.register("reason")}
                             />
@@ -145,13 +146,14 @@ export default function RejectCompanyDialog({ company }: RejectCompanyDialogProp
                             </Button>
                             <Button
                                 type="submit"
-                                variant="destructive"
+                                variant="default"
+                                className="bg-orange-600 hover:bg-orange-700"
                                 disabled={isLoading}
                             >
                                 {isLoading && (
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 )}
-                                Reject Application
+                                Suspend Company
                             </Button>
                         </DialogFooter>
                     </form>

@@ -1,5 +1,13 @@
 "use client";
 
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2, Pencil } from "lucide-react";
+import { toast } from "sonner";
+import { useAction } from "next-safe-action/hooks";
+
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -7,169 +15,226 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Company } from "@/lib/types/company-types";
-import { useState } from "react";
+import {
+  updateCompanySchema,
+  UpdateCompanyInput,
+} from "@/lib/schemas/company-schemas";
 import { updateCompanyAction } from "@/lib/services/actions/company.actions";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Company } from "@/lib/types/company-types";
+import { Label } from "@/components/ui/label";
 
 interface EditCompanyDialogProps {
   company: Company;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
 }
 
-export default function EditCompanyDialog({
-  company,
-  open,
-  onOpenChange,
-}: EditCompanyDialogProps) {
-  const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    companyName: company.companyName || "",
-    email: company.email || "",
-    phone: company.phone || "",
-    website: company.website || "",
-    industry: company.industry || "",
-    description: company.description || "",
+export default function EditCompanyDialog({ company }: EditCompanyDialogProps) {
+  const [open, setOpen] = useState(false);
+
+  const form = useForm<UpdateCompanyInput>({
+    resolver: zodResolver(updateCompanySchema),
+    defaultValues: {
+      companyId: company.$id,
+      companyName: company.companyName || "",
+      industry: company.industry || "",
+      size: company.size || "",
+      website: company.website || "",
+      phone: company.phone || "",
+      description: company.description || "",
+      street: company.address || "",
+      city: company.city || "",
+      state: company.state || "",
+      country: company.country || "",
+      zipCode: company.zipCode || "",
+    },
   });
 
-  function handleChange(field: string, value: string) {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  }
-
-  async function handleSubmit() {
-    if (!formData.companyName.trim() || !formData.email.trim()) {
-      toast.error("Company name and email are required");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const result = await updateCompanyAction({
-        companyId: company.$id,
-        ...formData,
-      });
-
-      if (result?.data?.success) {
-        toast.success(result.data.message);
-        onOpenChange(false);
-        router.refresh();
-      } else if (result?.serverError) {
-        toast.error(result.serverError);
+  const { execute, status } = useAction(updateCompanyAction, {
+    onSuccess: ({ data }) => {
+      if (data?.success) {
+        toast.success(data.message || "Company updated successfully");
+        setOpen(false);
+        form.reset();
+      } else if (data?.error) {
+        toast.error(data.error);
       }
-    } catch (error) {
+    },
+    onError: () => {
       toast.error("Failed to update company");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
+    },
+  });
+
+  const onSubmit = (data: UpdateCompanyInput) => {
+    execute(data);
+  };
+
+  const isLoading = status === "executing";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <Pencil className="h-4 w-4 mr-2" />
+          Edit
+        </Button>
+      </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Company</DialogTitle>
           <DialogDescription>
-            Update company information for {company.companyName}
+            Update company information. Changes will be saved immediately.
           </DialogDescription>
         </DialogHeader>
 
-        <FieldGroup>
-          <div className="grid md:grid-cols-2 gap-4">
-            <Field>
-              <FieldLabel>Company Name *</FieldLabel>
-              <Input
-                value={formData.companyName}
-                onChange={(e) => handleChange("companyName", e.target.value)}
-                disabled={isSubmitting}
-              />
-            </Field>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Basic Information */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium">Basic Information</h3>
 
             <Field>
-              <FieldLabel>Email *</FieldLabel>
+              <Label htmlFor="companyName">Company Name</Label>
               <Input
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-                disabled={isSubmitting}
+                id="companyName"
+                placeholder="Acme Corporation"
+                {...form.register("companyName")}
               />
+              <FieldError>{form.formState.errors.companyName?.message}</FieldError>
+            </Field>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Field>
+                <Label htmlFor="industry">Industry</Label>
+                <Input
+                  id="industry"
+                  placeholder="Technology"
+                  {...form.register("industry")}
+                />
+                <FieldError>{form.formState.errors.industry?.message}</FieldError>
+              </Field>
+
+              <Field>
+                <Label htmlFor="size">Company Size</Label>
+                <Input
+                  id="size"
+                  placeholder="50-200"
+                  {...form.register("size")}
+                />
+                <FieldError>{form.formState.errors.size?.message}</FieldError>
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Field>
+                <Label htmlFor="website">Website</Label>
+                <Input
+                  id="website"
+                  placeholder="https://example.com"
+                  {...form.register("website")}
+                />
+                <FieldError>{form.formState.errors.website?.message}</FieldError>
+              </Field>
+
+              <Field>
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  placeholder="+1 (555) 123-4567"
+                  {...form.register("phone")}
+                />
+                <FieldError>{form.formState.errors.phone?.message}</FieldError>
+              </Field>
+            </div>
+
+            <Field>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Brief description of the company"
+                rows={3}
+                {...form.register("description")}
+              />
+              <FieldError>{form.formState.errors.description?.message}</FieldError>
             </Field>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <Field>
-              <FieldLabel>Phone</FieldLabel>
-              <Input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleChange("phone", e.target.value)}
-                disabled={isSubmitting}
-              />
-            </Field>
+          {/* Address Information */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium">Address</h3>
 
             <Field>
-              <FieldLabel>Website</FieldLabel>
+              <Label htmlFor="street">Street Address</Label>
               <Input
-                type="url"
-                value={formData.website}
-                onChange={(e) => handleChange("website", e.target.value)}
-                disabled={isSubmitting}
+                id="street"
+                placeholder="123 Main Street"
+                {...form.register("street")}
               />
+              <FieldError>{form.formState.errors.street?.message}</FieldError>
             </Field>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Field>
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  placeholder="San Francisco"
+                  {...form.register("city")}
+                />
+                <FieldError>{form.formState.errors.city?.message}</FieldError>
+              </Field>
+
+              <Field>
+                <Label htmlFor="state">State/Province</Label>
+                <Input
+                  id="state"
+                  placeholder="California"
+                  {...form.register("state")}
+                />
+                <FieldError>{form.formState.errors.state?.message}</FieldError>
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Field>
+                <Label htmlFor="country">Country</Label>
+                <Input
+                  id="country"
+                  placeholder="United States"
+                  {...form.register("country")}
+                />
+                <FieldError>{form.formState.errors.country?.message}</FieldError>
+              </Field>
+
+              <Field>
+                <Label htmlFor="zipCode">ZIP/Postal Code</Label>
+                <Input
+                  id="zipCode"
+                  placeholder="94102"
+                  {...form.register("zipCode")}
+                />
+                <FieldError>{form.formState.errors.zipCode?.message}</FieldError>
+              </Field>
+            </div>
           </div>
 
-          <Field>
-            <FieldLabel>Industry</FieldLabel>
-            <Input
-              value={formData.industry}
-              onChange={(e) => handleChange("industry", e.target.value)}
-              disabled={isSubmitting}
-            />
-          </Field>
-
-          <Field>
-            <FieldLabel>Description</FieldLabel>
-            <Textarea
-              value={formData.description}
-              onChange={(e) => handleChange("description", e.target.value)}
-              rows={3}
-              disabled={isSubmitting}
-            />
-          </Field>
-        </FieldGroup>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Changes"
-            )}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

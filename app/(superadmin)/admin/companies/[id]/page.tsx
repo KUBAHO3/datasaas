@@ -1,497 +1,253 @@
-import { getCompanyById } from "@/lib/services/actions/company.actions";
-import { requireSuperAdmin } from "@/lib/access-control/permissions";
 import { notFound } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Building2,
-  MapPin,
-  Globe,
-  Phone,
-  Mail,
-  Calendar,
-  User,
-  FileText,
-  Users,
-  ArrowLeft,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Ban,
-} from "lucide-react";
-import Link from "next/link";
-import { format } from "date-fns";
-import { TeamMembersTable } from "@/features/company/team-members-table";
-import Image from "next/image";
-import { CompanyActionsBar } from "@/features/admin/company-actions-bar";
+import { Building2, Calendar, CheckCircle2, Mail, Phone, User, XCircle } from "lucide-react";
 
-interface CompanyDetailPageProps {
-  params: Promise<{ id: string }>;
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { getCompanyById } from "@/lib/services/actions/company.actions";
+import { ResendNotificationButton } from "@/features/admin/resend-notification-button";
+import EditCompanyDialog from "@/features/admin/edit-company-dialog";
+import DeleteCompanyDialog from "@/features/admin/delete-company-dialog";
+
+interface PageProps {
+  params: Promise<{
+    id: string;
+  }>;
 }
 
-export default async function CompanyDetailPage({
-  params,
-}: CompanyDetailPageProps) {
-  await requireSuperAdmin();
-  const { id } = await params;
+export default async function CompanyDetailsPage({ params }: PageProps) {
+  const company = await getCompanyById((await params).id);
 
-  const result = await getCompanyById(id);
-
-  if (!result) {
+  if (!company) {
     notFound();
   }
 
-  const { company, onboarding, teamMembers } = result;
-
-  const getStatusIcon = (status: string) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
-        return <CheckCircle2 className="h-5 w-5 text-green-600" />;
+        return "bg-green-100 text-green-800 border-green-200";
       case "pending":
-        return <Clock className="h-5 w-5 text-yellow-600" />;
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
       case "suspended":
-        return <Ban className="h-5 w-5 text-red-600" />;
+        return "bg-orange-100 text-orange-800 border-orange-200";
       case "rejected":
-        return <XCircle className="h-5 w-5 text-gray-600" />;
+        return "bg-red-100 text-red-800 border-red-200";
       default:
-        return null;
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      pending:
-        "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
-      active:
-        "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-      suspended: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
-      rejected:
-        "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300",
-    };
-
-    return (
-      <Badge variant="outline" className={styles[status]}>
-        {getStatusIcon(status)}
-        <span className="ml-2">
-          {status.charAt(0).toUpperCase() + status.slice(1)}
-        </span>
-      </Badge>
-    );
-  };
-
   return (
-    <main className="flex-1 p-6 md:p-8">
-      <div className="mx-auto max-w-7xl space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/admin/companies">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">
-                {company.companyName}
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Company Details & Information
-              </p>
-            </div>
-          </div>
-
-          <CompanyActionsBar company={company} />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{company.companyName}</h1>
+          <p className="text-muted-foreground">Company Details & Management</p>
         </div>
+        <div className="flex gap-2">
+          <ResendNotificationButton company={company} />
+          <EditCompanyDialog company={company} />
+          <DeleteCompanyDialog company={company} redirectAfterDelete />
+        </div>
+      </div>
 
-        {/* Status Banner */}
+      {/* Status Badge */}
+      <div>
+        <Badge className={getStatusColor(company.status)} variant="outline">
+          {company.status === "active" && <CheckCircle2 className="h-3 w-3 mr-1" />}
+          {company.status === "rejected" && <XCircle className="h-3 w-3 mr-1" />}
+          {company.status.toUpperCase()}
+        </Badge>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Basic Information */}
         <Card>
-          <CardContent className="flex items-center justify-between pt-6">
-            <div className="flex items-center gap-3">
-              <Building2 className="h-8 w-8 text-primary" />
+          <CardHeader>
+            <CardTitle>Basic Information</CardTitle>
+            <CardDescription>Company profile and contact details</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-start gap-3">
+              <Building2 className="h-5 w-5 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-sm text-muted-foreground">Company Status</p>
-                <div className="mt-1">{getStatusBadge(company.status)}</div>
+                <p className="text-sm font-medium">Company Name</p>
+                <p className="text-sm text-muted-foreground">{company.companyName}</p>
               </div>
             </div>
 
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Applied</p>
-              <p className="font-medium">
-                {format(new Date(company.$createdAt), "MMMM d, yyyy")}
-              </p>
-            </div>
+            {company.industry && (
+              <div className="flex items-start gap-3">
+                <Building2 className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Industry</p>
+                  <p className="text-sm text-muted-foreground">{company.industry}</p>
+                </div>
+              </div>
+            )}
+
+            {company.size && (
+              <div className="flex items-start gap-3">
+                <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Company Size</p>
+                  <p className="text-sm text-muted-foreground">{company.size}</p>
+                </div>
+              </div>
+            )}
+
+            {company.email && (
+              <div className="flex items-start gap-3">
+                <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Email</p>
+                  <p className="text-sm text-muted-foreground">{company.email}</p>
+                </div>
+              </div>
+            )}
+
+            {company.phone && (
+              <div className="flex items-start gap-3">
+                <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Phone</p>
+                  <p className="text-sm text-muted-foreground">{company.phone}</p>
+                </div>
+              </div>
+            )}
+
+            {company.website && (
+              <div className="flex items-start gap-3">
+                <Building2 className="h-5 w-5 text-muted-foreground mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Website</p>
+                  <a
+                    href={company.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    {company.website}
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {company.description && (
+              <>
+                <Separator />
+                <div>
+                  <p className="text-sm font-medium mb-2">Description</p>
+                  <p className="text-sm text-muted-foreground">{company.description}</p>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="details">Company Details</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="team">Team Members</TabsTrigger>
-          </TabsList>
+        {/* Address Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Address</CardTitle>
+            <CardDescription>Company location details</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {company.address && <p className="text-sm">{company.address}</p>}
+            {company.city && (
+              <p className="text-sm">
+                {company.city}
+                {company.state && `, ${company.state}`}
+                {company.zipCode && ` ${company.zipCode}`}
+              </p>
+            )}
+            {company.country && <p className="text-sm font-medium">{company.country}</p>}
+          </CardContent>
+        </Card>
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Basic Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Basic Information</CardTitle>
-                  <CardDescription>
-                    Primary company contact details
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Email</p>
-                      <p className="font-medium">{company.email}</p>
-                    </div>
-                  </div>
-
-                  {company.phone && (
-                    <div className="flex items-start gap-3">
-                      <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Phone</p>
-                        <p className="font-medium">{company.phone}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {company.website && (
-                    <div className="flex items-start gap-3">
-                      <Globe className="h-5 w-5 text-muted-foreground mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Website</p>
-                        <a
-                          href={company.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {company.website}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-
-                  {company.industry && (
-                    <div className="flex items-start gap-3">
-                      <Building2 className="h-5 w-5 text-muted-foreground mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Industry
-                        </p>
-                        <p className="font-medium">{company.industry}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {company.size && (
-                    <div className="flex items-start gap-3">
-                      <Users className="h-5 w-5 text-muted-foreground mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Company Size
-                        </p>
-                        <p className="font-medium">{company.size}</p>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Address Information */}
-              {company.address && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Address</CardTitle>
-                    <CardDescription>
-                      Company physical location
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-                      <div>
-                        <p className="font-medium">{company.address}</p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {company.city}, {company.state} {company.zipCode}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {company.country}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+        {/* Status History */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Status History</CardTitle>
+            <CardDescription>Company approval and status timeline</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-start gap-3">
+              <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">Created</p>
+                <p className="text-sm text-muted-foreground">
+                  {new Date(company.$createdAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
+              </div>
             </div>
 
-            {/* Description */}
-            {company.description && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Company Description</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{company.description}</p>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Approval Information */}
-            {(company.approvedAt || company.rejectedAt) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Status Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {company.approvedAt && (
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Approved On
-                        </p>
-                        <p className="font-medium">
-                          {format(
-                            new Date(company.approvedAt),
-                            "MMMM d, yyyy 'at' h:mm a"
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {company.rejectedAt && (
-                    <>
-                      <div className="flex items-start gap-3">
-                        <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Rejected On
-                          </p>
-                          <p className="font-medium">
-                            {format(
-                              new Date(company.rejectedAt),
-                              "MMMM d, yyyy 'at' h:mm a"
-                            )}
-                          </p>
-                        </div>
-                      </div>
-
-                      {company.rejectionReason && (
-                        <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900 p-4">
-                          <p className="text-sm font-medium text-red-900 dark:text-red-100 mb-2">
-                            Rejection Reason:
-                          </p>
-                          <p className="text-sm text-red-800 dark:text-red-200">
-                            {company.rejectionReason}
-                          </p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          {/* Company Details Tab */}
-          <TabsContent value="details" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Complete Company Information</CardTitle>
-                <CardDescription>
-                  All details from onboarding process
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {onboarding?.logoFileId && (
-                  <div>
-                    <p className="text-sm font-medium mb-3">Company Logo</p>
-                    <Image
-                      src={`${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${process.env.NEXT_PUBLIC_IMAGES_BUCKET_ID}/files/${onboarding.logoFileId}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT}`}
-                      alt="Company Logo"
-                      width={150}
-                      height={150}
-                      className="rounded-lg border"
-                    />
-                  </div>
-                )}
-
-                <Separator />
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <p className="text-sm font-medium">Tax ID</p>
-                    <p className="text-muted-foreground">
-                      {onboarding?.taxId || "N/A"}
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-medium">Team ID</p>
-                    <p className="text-muted-foreground">
-                      {company.teamId || "Not created yet"}
-                    </p>
-                  </div>
+            {company.approvedAt && (
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Approved</p>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(company.approvedAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
+            )}
 
-          {/* Documents Tab */}
-          <TabsContent value="documents" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Uploaded Documents</CardTitle>
-                <CardDescription>
-                  Business registration and verification documents
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {onboarding?.businessRegistrationFileId && (
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="font-medium">
-                          Business Registration Certificate
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Required document
-                        </p>
-                      </div>
-                    </div>
-                    <Button size="sm" variant="outline" asChild>
-                      <a
-                        href={`${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${process.env.NEXT_PUBLIC_DOCUMENTS_BUCKET_ID}/files/${onboarding.businessRegistrationFileId}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        View
-                      </a>
-                    </Button>
-                  </div>
-                )}
-
-                {onboarding?.taxDocumentFileId && (
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="font-medium">Tax Document</p>
-                        <p className="text-xs text-muted-foreground">
-                          Required document
-                        </p>
-                      </div>
-                    </div>
-                    <Button size="sm" variant="outline" asChild>
-                      <a
-                        href={`${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${process.env.NEXT_PUBLIC_DOCUMENTS_BUCKET_ID}/files/${onboarding.taxDocumentFileId}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        View
-                      </a>
-                    </Button>
-                  </div>
-                )}
-
-                {onboarding?.proofOfAddressFileId && (
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="font-medium">Proof of Address</p>
-                        <p className="text-xs text-muted-foreground">
-                          Required document
-                        </p>
-                      </div>
-                    </div>
-                    <Button size="sm" variant="outline" asChild>
-                      <a
-                        href={`${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${process.env.NEXT_PUBLIC_DOCUMENTS_BUCKET_ID}/files/${onboarding.proofOfAddressFileId}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        View
-                      </a>
-                    </Button>
-                  </div>
-                )}
-
-                {onboarding?.certificationsFileIds &&
-                  onboarding.certificationsFileIds.length > 0 && (
-                    <>
-                      <Separator />
-                      <div>
-                        <p className="text-sm font-medium mb-3">
-                          Professional Certifications
-                        </p>
-                        <div className="space-y-2">
-                          {onboarding.certificationsFileIds.map(
-                            (fileId, index) => (
-                              <div
-                                key={fileId}
-                                className="flex items-center justify-between rounded-lg border p-3"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <FileText className="h-4 w-4 text-muted-foreground" />
-                                  <p className="text-sm">
-                                    Certification {index + 1}
-                                  </p>
-                                </div>
-                                <Button size="sm" variant="ghost" asChild>
-                                  <a
-                                    href={`${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${process.env.NEXT_PUBLIC_DOCUMENTS_BUCKET_ID}/files/${fileId}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    View
-                                  </a>
-                                </Button>
-                              </div>
-                            )
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                {!onboarding?.businessRegistrationFileId &&
-                  !onboarding?.taxDocumentFileId &&
-                  !onboarding?.proofOfAddressFileId && (
-                    <p className="text-center text-muted-foreground py-8">
-                      No documents uploaded
+            {company.rejectedAt && (
+              <div className="flex items-start gap-3">
+                <XCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium">Rejected</p>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(company.rejectedAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </p>
+                  {company.rejectionReason && (
+                    <p className="text-sm text-muted-foreground mt-1 italic">
+                      Reason: {company.rejectionReason}
                     </p>
                   )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Team Members Tab */}
-          <TabsContent value="team">
-            <TeamMembersTable members={teamMembers} />
-          </TabsContent>
-        </Tabs>
+        <Card>
+          <CardHeader>
+            <CardTitle>Team Information</CardTitle>
+            <CardDescription>Appwrite team and access details</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {company.teamId ? (
+              <>
+                <div>
+                  <p className="text-sm font-medium">Team ID</p>
+                  <p className="text-sm text-muted-foreground font-mono">{company.teamId}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Status</p>
+                  <p className="text-sm text-green-600">Team Created</p>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">No team created yet</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    </main>
+    </div>
   );
 }
