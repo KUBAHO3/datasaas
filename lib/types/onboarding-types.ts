@@ -43,37 +43,28 @@ export interface OnboardingStepData {
   isComplete: boolean;
 }
 
-export interface OnboardingProgressWithArrays
-  extends Omit<OnboardingProgress, "completedSteps" | "certificationsFileIds"> {
-  completedSteps: number[];
-  certificationsFileIds?: string[];
-}
+export type OnboardingProgressWithArrays = OnboardingProgress;
 
 export const OnboardingHelpers = {
   fromDB(progress: OnboardingProgress): OnboardingProgressWithArrays {
     return {
       ...progress,
-      completedSteps: progress.completedSteps
-        ? progress.completedSteps
-            .map(Number)
-            .filter((n) => !isNaN(n))
-        : [],
-      certificationsFileIds: progress.certificationsFileIds
-        ? progress.certificationsFileIds.split(",").filter(Boolean)
-        : undefined,
+      completedSteps: progress.completedSteps || [],
+      certificationsFileIds: progress.certificationsFileIds || [],
     };
   },
-
   toDB(
     progress: Partial<OnboardingProgressWithArrays>
   ): Partial<OnboardingProgress> {
-    const { completedSteps, certificationsFileIds, ...rest } = progress;
+    // Appwrite accepts arrays directly!
     return {
-      ...rest,
-      completedSteps: completedSteps ? completedSteps.join(",") : undefined,
-      certificationsFileIds: certificationsFileIds
-        ? certificationsFileIds.join(",")
-        : undefined,
-    } as Partial<OnboardingProgress>;
+      ...progress,
+      ...(progress.completedSteps !== undefined && {
+        completedSteps: progress.completedSteps,
+      }),
+      ...(progress.certificationsFileIds !== undefined && {
+        certificationsFileIds: progress.certificationsFileIds,
+      }),
+    };
   },
 };

@@ -17,11 +17,12 @@ export default async function OnboardingLayout({
                         Complete the steps below to register your company
                     </p>
                 </div>
-
-                <OnboardingStepper
-                    currentStep={progress.currentStep}
-                    completedSteps={progress.completedSteps}
-                />
+                {progress.error ? <></> : (
+                    <OnboardingStepper
+                        currentStep={progress.currentStep}
+                        completedSteps={progress.completedSteps}
+                    />
+                )}
 
                 {children}
             </div>

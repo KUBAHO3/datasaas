@@ -7,9 +7,17 @@ export default async function Step2Page() {
     await requireAuth();
 
     const progress = await getOnboardingProgress();
-    
-    if (progress.currentStep > 2 && progress.currentStep < 6) {
+
+    if (progress.currentStep > 2 && progress.currentStep < 6 && progress.status === "in_progress") {
         redirect(`/onboarding/step-${progress.currentStep}`);
+    }
+
+    if (progress.status === "submitted" || progress.status === "rejected") {
+        redirect("/onboarding/pending-approval");
+    }
+
+    if (progress.status === "approved") {
+        redirect("/dashboard");
     }
 
     const initialData = {

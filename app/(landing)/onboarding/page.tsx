@@ -7,7 +7,7 @@ export default async function OnboardingPage() {
 
     const progress = await getOnboardingProgress();
 
-    if (progress.status === "submitted") {
+    if (progress.status === "submitted" || progress.status === "rejected") {
         redirect("/onboarding/pending-approval");
     }
 
@@ -15,17 +15,10 @@ export default async function OnboardingPage() {
         redirect("/dashboard");
     }
 
-    if (progress.status === "rejected") {
-        redirect("/onboarding/step-2");
-    }
-
     const currentStep = progress.currentStep;
 
     switch (currentStep) {
         case 1:
-            redirect("/onboarding/step-2");
-            break;
-
         case 2:
             redirect("/onboarding/step-2");
             break;
@@ -49,6 +42,4 @@ export default async function OnboardingPage() {
         default:
             redirect("/onboarding/step-2");
     }
-
-    return null;
 }

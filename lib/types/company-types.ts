@@ -2,6 +2,7 @@ import { Models } from "node-appwrite";
 
 export type Company = Models.Document & {
   companyName: string;
+  name?: string;
   email: string;
   phone?: string;
   website?: string;

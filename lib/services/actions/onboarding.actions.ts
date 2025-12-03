@@ -20,14 +20,16 @@ import {
 } from "@/lib/schemas/onboarding-schemas";
 import { revalidatePath } from "next/cache";
 import { CompanyAdminModel } from "../models/company.model";
+import { OnboardingProgressWithArrays } from "@/lib/types/onboarding-types";
+import { redirect } from "next/navigation";
 
-export async function getOnboardingProgress() {
+export async function getOnboardingProgress(): Promise<OnboardingProgressWithArrays> {
   try {
     const cookieStore = await import("next/headers").then((m) => m.cookies());
     const session = cookieStore.get(AUTH_COOKIE);
 
     if (!session) {
-      throw new Error("Not authenticated");
+      redirect("/auth/sign-in");
     }
 
     const sessionAccountService = new SessionAccountService();
@@ -43,7 +45,8 @@ export async function getOnboardingProgress() {
 
     return progress;
   } catch (error) {
-    throw new Error("Failed to get onboarding progress");
+    console.error("Failed to get onboarding progress:", error);
+    redirect("/auth/sign-in");
   }
 }
 
@@ -112,7 +115,7 @@ export const saveCompanyBasicInfo = authAction
         phone: parsedInput.phone,
         description: parsedInput.description,
         currentStep: 3,
-        completedSteps: [1, 2],
+        completedSteps: [1,2],
       });
 
       revalidatePath("/onboarding");
@@ -136,14 +139,13 @@ export const saveCompanyAddress = authAction
       const onboardingModel = new OnboardingAdminModel();
 
       await onboardingModel.updateProgress(ctx.userId, {
-        // Flatten the data - no nested objects
         street: parsedInput.street,
         city: parsedInput.city,
         state: parsedInput.state,
         country: parsedInput.country,
         zipCode: parsedInput.zipCode,
         currentStep: 4,
-        completedSteps: [1, 2, 3],
+        completedSteps: [1,2,3],
       });
 
       revalidatePath("/onboarding");
@@ -167,7 +169,6 @@ export const saveCompanyBranding = authAction
       const onboardingModel = new OnboardingAdminModel();
 
       await onboardingModel.updateProgress(ctx.userId, {
-        // Flatten the data - no nested objects
         taxId: parsedInput.taxId,
         logoFileId: parsedInput.logoFileId,
         currentStep: 5,
@@ -224,7 +225,6 @@ export const submitOnboarding = authAction.action(async ({ ctx }) => {
       return { error: "Onboarding progress not found" };
     }
 
-    // Check that all required fields are filled
     if (
       !progress.companyName ||
       !progress.industry ||
@@ -243,9 +243,13 @@ export const submitOnboarding = authAction.action(async ({ ctx }) => {
       return { error: "Please complete all steps before submitting" };
     }
 
+    if (progress.status === "submitted") {
+      return { error: "Application already submitted" };
+    }
+
     const companyModel = new CompanyAdminModel();
     const company = await companyModel.create({
-      name: progress.companyName,
+      companyName: progress.companyName,
       email: ctx.email,
       phone: progress.phone,
       website: progress.website,
@@ -257,7 +261,7 @@ export const submitOnboarding = authAction.action(async ({ ctx }) => {
       state: progress.state,
       country: progress.country,
       zipCode: progress.zipCode,
-      logo: progress.logoFileId,
+      logoFileId: progress.logoFileId,
       status: "pending",
       createdBy: ctx.userId,
     });
@@ -278,6 +282,8 @@ export const submitOnboarding = authAction.action(async ({ ctx }) => {
 
     revalidatePath("/onboarding");
     revalidatePath("/onboarding/pending-approval");
+    revalidatePath("/admin");
+    revalidatePath("/admin/companies");
 
     return {
       success: true,
@@ -289,6 +295,56 @@ export const submitOnboarding = authAction.action(async ({ ctx }) => {
     return {
       error:
         error instanceof Error ? error.message : "Failed to submit application",
+    };
+  }
+});
+
+export const resubmitOnboarding = authAction.action(async ({ ctx }) => {
+  try {
+    const onboardingModel = new OnboardingAdminModel();
+    const progress = await onboardingModel.findByUserId(ctx.userId);
+
+    if (!progress) {
+      return { error: "Onboarding progress not found" };
+    }
+
+    if (progress.status !== "rejected") {
+      return { error: "Only rejected applications can be resubmitted" };
+    }
+
+    if (!progress.companyId) {
+      return { error: "No company found for resubmission" };
+    }
+
+    const companyModel = new CompanyAdminModel();
+    await companyModel.updateById(progress.companyId, {
+      status: "pending",
+      rejectedBy: undefined,
+      rejectedAt: undefined,
+      rejectionReason: undefined,
+    });
+
+    await onboardingModel.updateProgress(ctx.userId, {
+      status: "submitted",
+      rejectionReason: undefined,
+    });
+
+    revalidatePath("/onboarding");
+    revalidatePath("/onboarding/pending-approval");
+    revalidatePath("/admin");
+    revalidatePath("/admin/companies");
+
+    return {
+      success: true,
+      message: "Application resubmitted successfully",
+    };
+  } catch (error) {
+    console.error("Resubmit onboarding error:", error);
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to resubmit application",
     };
   }
 });

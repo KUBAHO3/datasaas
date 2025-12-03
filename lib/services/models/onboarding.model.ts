@@ -59,12 +59,10 @@ export class OnboardingAdminModel extends AdminDBModel<OnboardingProgress> {
     userId: string,
     data: Partial<OnboardingProgressWithArrays>
   ): Promise<OnboardingProgressWithArrays> {
-    // Convert arrays to strings for DB
     const dbData = OnboardingHelpers.toDB(data);
 
     const updated = await this.updateById(userId, dbData);
 
-    // Convert back to app format
     return OnboardingHelpers.fromDB(updated);
   }
 }
