@@ -40,7 +40,7 @@ export function SignInCard() {
                 if (data.user.isSuperAdmin) {
                     router.push("/admin");
                 } else {
-                    router.push("/dashboard");
+                    router.push(data.user.companyId ? `/org/${data.user.companyId}` : '/');
                 }
             } else if (data?.error) {
                 toast.error("Sign in failed", {

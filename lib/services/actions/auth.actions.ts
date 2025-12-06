@@ -53,6 +53,7 @@ export const signInAction = action
           email: user.email,
           name: user.name,
           isSuperAdmin,
+          companyId: userData?.companyId ?? null
         },
       };
     } catch (error) {

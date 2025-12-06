@@ -26,6 +26,8 @@ import {
 import { Company } from "@/lib/types/company-types";
 import { FindOptions, WhereClause } from "../core/base-db-model";
 import { Permission, Role } from "node-appwrite";
+import { cache } from "react";
+import { getUserTeamRole, verifyTeamMembership } from "./users.action";
 
 interface CompaniesFilters {
   status?: string;
@@ -44,12 +46,21 @@ interface PaginationResult {
   hasPrev: boolean;
 }
 
-interface CompaniesResponse {
-  companies: Company[];
-  pagination: PaginationResult;
+export interface DashboardStats {
+  totalForms: number;
+  totalSubmissions: number;
+  totalUsers: number;
+  activeUsers: number;
 }
 
-export async function getDashboardStats() {
+export interface DashboardData {
+  company: Company;
+  stats: DashboardStats;
+  isMember: boolean;
+  userRole: string;
+}
+
+export async function getSuperAdminDashboardStats() {
   const companyModel = new CompanyAdminModel();
   const stats = await companyModel.getStats();
   const recentApplications = await companyModel.getPendingApplications(5);
@@ -777,3 +788,79 @@ export const resendNotificationAction = superAdminAction
       };
     }
   });
+
+export const getDashboardStats = cache(
+  async (companyId: string): Promise<DashboardStats> => {
+    try {
+      const userDataModel = new UserDataAdminModel();
+
+      // Count total users in the company
+      const totalUsers = await userDataModel.count({
+        where: [{ field: "companyId", operator: "equals", value: companyId }],
+      });
+
+      // TODO: Replace with actual form and submission counts when those features are built
+      const stats: DashboardStats = {
+        totalForms: 0,
+        totalSubmissions: 0,
+        totalUsers,
+        activeUsers: totalUsers, // For now, assume all users are active
+      };
+
+      return stats;
+    } catch (error) {
+      console.error("Get dashboard stats error:", error);
+      return {
+        totalForms: 0,
+        totalSubmissions: 0,
+        totalUsers: 0,
+        activeUsers: 0,
+      };
+    }
+  }
+);
+
+export const getCompanyDashboard = cache(
+  async (companyId: string, userId: string): Promise<DashboardData | null> => {
+    try {
+      const companyModel = new CompanyAdminModel();
+      const company = await companyModel.findById(companyId);
+
+      if (!company) {
+        return null;
+      }
+
+      // Check team membership if company is approved
+      let isMember = false;
+      let userRole = "viewer";
+
+      if (company.status === "active") {
+        isMember = await verifyTeamMembership(userId, company.$id);
+        if (isMember) {
+          userRole = await getUserTeamRole(userId, company.$id);
+        }
+      }
+
+      // Get dashboard stats only for active companies
+      const stats =
+        company.status === "active"
+          ? await getDashboardStats(companyId)
+          : {
+              totalForms: 0,
+              totalSubmissions: 0,
+              totalUsers: 0,
+              activeUsers: 0,
+            };
+
+      return {
+        company,
+        stats,
+        isMember,
+        userRole,
+      };
+    } catch (error) {
+      console.error("Get company dashboard error:", error);
+      return null;
+    }
+  }
+);

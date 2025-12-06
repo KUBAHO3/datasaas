@@ -1,7 +1,10 @@
-import AppSidebar from '@/components/dashboard/app-sidebar';
-import { companyNavItems } from '@/components/dashboard/nav-config'; // ✅ Changed import
-import { requireCompanyAccess } from '@/lib/access-control/permissions';
 import { notFound } from 'next/navigation';
+import { requireCompanyAccess } from '@/lib/access-control/permissions';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
+import { CompanyAdminModel } from '@/lib/services/models/company.model';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from '@/components/ui/breadcrumb';
+import { OrgSidebar } from '@/features/dashboard/org-sidebar';
 
 interface OrgLayoutProps {
     children: React.ReactNode;
@@ -16,21 +19,39 @@ export default async function OrgLayout({ children, params }: OrgLayoutProps) {
         notFound();
     }
 
+    // Get company details for sidebar
+    const companyModel = new CompanyAdminModel();
+    const company = await companyModel.findById(orgId);
+
+    if (!company) {
+        notFound();
+    }
+
     return (
-        <div className="flex h-screen overflow-hidden">
-            <AppSidebar
-                navItems={companyNavItems(orgId)}
+        <SidebarProvider>
+            <OrgSidebar
+                orgId={orgId}
                 user={{
                     name: userContext.name,
                     email: userContext.email,
                     role: userContext.role || "Member",
                 }}
+                companyName={company.companyName || "Your Organization"}
             />
-            <div className="flex flex-1 flex-col overflow-hidden">
-                <main className="flex-1 overflow-y-auto">
-                    {children}
-                </main>
-            </div>
-        </div>
+            <SidebarInset>
+                <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+                    <SidebarTrigger className="-ml-1" />
+                    <Separator orientation="vertical" className="mr-2 h-4" />
+                    <Breadcrumb>
+                        <BreadcrumbList>
+                            <BreadcrumbItem>
+                                <BreadcrumbPage>{company.companyName}</BreadcrumbPage>
+                            </BreadcrumbItem>
+                        </BreadcrumbList>
+                    </Breadcrumb>
+                </header>
+                {children}
+            </SidebarInset>
+        </SidebarProvider>
     );
 }

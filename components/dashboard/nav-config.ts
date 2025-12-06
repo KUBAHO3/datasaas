@@ -30,14 +30,14 @@ export const companyNavItems = (orgId: string): NavItem[] => [
     icon: "LayoutDashboard",
   },
   {
-    title: "Forms",
-    href: `/org/${orgId}/forms`,
-    icon: "FileText",
+    title: "Data Collection",
+    href: `/org/${orgId}/data-collection`,
+    icon: "Database",
   },
   {
-    title: "Data",
-    href: `/org/${orgId}/data`,
-    icon: "Database",
+    title: "Users",
+    href: `/org/${orgId}/users`,
+    icon: "Users",
   },
   {
     title: "Settings",
