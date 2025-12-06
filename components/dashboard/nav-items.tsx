@@ -4,7 +4,26 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { NavItem } from "./app-sidebar"
-import { BarChart3, Building2, Database, FileText, LayoutDashboard, Settings, Users } from "lucide-react"
+import {
+    BarChart3,
+    Building2,
+    Database,
+    FileText,
+    LayoutDashboard,
+    Settings,
+    Users,
+    LucideIcon
+} from "lucide-react"
+
+const iconMap: Record<string, LucideIcon> = {
+    LayoutDashboard,
+    Building2,
+    Users,
+    Settings,
+    FileText,
+    Database,
+    BarChart3,
+}
 
 export default function NavItems({ items }: { items: NavItem[] }) {
     const pathname = usePathname()
@@ -16,7 +35,7 @@ export default function NavItems({ items }: { items: NavItem[] }) {
                     pathname === item.href ||
                     pathname.startsWith(item.href + "/")
 
-                const Icon = item.icon
+                const Icon = iconMap[item.icon] || LayoutDashboard
 
                 return (
                     <Link
@@ -37,59 +56,3 @@ export default function NavItems({ items }: { items: NavItem[] }) {
         </nav>
     )
 }
-
-export const adminNavItems: NavItem[] = [
-    {
-        title: "Dashboard",
-        href: "/admin",
-        icon: LayoutDashboard,
-    },
-    {
-        title: "Companies",
-        href: "/admin/companies",
-        icon: Building2,
-    },
-    {
-        title: "Users",
-        href: "/admin/users",
-        icon: Users,
-    },
-    {
-        title: "Settings",
-        href: "/admin/settings",
-        icon: Settings,
-    },
-]
-
-export const companyNavItems: NavItem[] = [
-    {
-        title: "Dashboard",
-        href: "/dashboard",
-        icon: LayoutDashboard,
-    },
-    {
-        title: "Forms",
-        href: "/dashboard/forms",
-        icon: FileText,
-    },
-    {
-        title: "Data",
-        href: "/dashboard/data",
-        icon: Database,
-    },
-    {
-        title: "Analytics",
-        href: "/dashboard/analytics",
-        icon: BarChart3,
-    },
-    {
-        title: "Team",
-        href: "/dashboard/team",
-        icon: Users,
-    },
-    {
-        title: "Settings",
-        href: "/dashboard/settings",
-        icon: Settings,
-    },
-]

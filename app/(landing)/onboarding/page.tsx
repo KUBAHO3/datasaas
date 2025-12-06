@@ -7,11 +7,11 @@ export default async function OnboardingPage() {
 
     const progress = await getOnboardingProgress();
 
-    if (progress.status === "submitted" || progress.status === "rejected") {
+    if (progress.status === "pending" || progress.status === "rejected") {
         redirect("/onboarding/pending-approval");
     }
 
-    if (progress.status === "approved") {
+    if (progress.status === "active") {
         redirect("/dashboard");
     }
 

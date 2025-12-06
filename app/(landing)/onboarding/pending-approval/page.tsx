@@ -4,22 +4,24 @@ import { redirect } from "next/navigation";
 import { PendingApprovalCard } from "@/features/onboarding/pending-approval-card";
 
 export default async function PendingApprovalPage() {
-    await requireAuth();
-    const progress = await getOnboardingProgress();
+    const userContext = await requireAuth();
+    const company = await getOnboardingProgress();
 
-    if (progress.status !== 'submitted' && progress.status !== 'rejected') {
-        redirect('/onboarding');
-    }
-
-    if (progress.status === 'approved' as string) {
-        redirect('/dashboard');
+    if (company.status !== "pending" && company.status !== "rejected") {
+        if (company.status === "draft") {
+            redirect("/onboarding");
+        }
+        
+        if (company.status === "active" && userContext.companyId) {
+            redirect(`/org/${userContext.companyId}`);
+        }
     }
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
             <PendingApprovalCard
-                status={progress.status}
-                rejectionReason={progress.rejectionReason}
+                status={company.status}
+                rejectionReason={company.rejectionReason}
             />
         </div>
     );

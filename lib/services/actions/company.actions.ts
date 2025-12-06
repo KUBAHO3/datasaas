@@ -25,6 +25,7 @@ import {
 } from "../email/company-emails";
 import { Company } from "@/lib/types/company-types";
 import { FindOptions, WhereClause } from "../core/base-db-model";
+import { Permission, Role } from "node-appwrite";
 
 interface CompaniesFilters {
   status?: string;
@@ -152,27 +153,67 @@ export const approveCompanyAction = superAdminAction
       }
 
       const teamsService = new AdminTeamsService();
-      const team = await teamsService.create({
-        name: company.companyName,
-        roles: ["owner"],
-      });
+      const team = await teamsService.createWithId(
+        companyId,
+        company.companyName,
+        ["owner"]
+      );
 
-      await companyModel.updateById(companyId, {
-        status: "active",
-        teamId: team.$id,
-        approvedBy: ctx.userId,
-        approvedAt: new Date().toISOString(),
-      });
+      await companyModel.updateById(
+        companyId,
+        {
+          status: "active",
+          approvedBy: ctx.userId,
+          approvedAt: new Date().toISOString(),
+        },
+        [
+          Permission.read(Role.team(companyId)),
+          Permission.update(Role.team(companyId)),
+          Permission.read(Role.label("superadmin")),
+          Permission.update(Role.label("superadmin")),
+          Permission.delete(Role.label("superadmin")),
+        ]
+      );
 
       const userDataModel = new UserDataAdminModel();
-      const userData = await userDataModel.findByUserId(company.createdBy);
+      const companyUsers = await userDataModel.findMany({
+        where: [{ field: "companyId", operator: "equals", value: companyId }],
+      });
+
+      for (const userData of companyUsers) {
+        try {
+          const roles = userData.role === "owner" ? ["owner"] : ["member"];
+
+          await teamsService.createMembership(
+            companyId,
+            roles,
+            userData.email,
+            undefined,
+            userData.userId,
+            undefined,
+            userData.name
+          );
+
+          await userDataModel.updateById(userData.$id, {
+            companyId: companyId,
+            role: userData.role || "member",
+          });
+        } catch (memberError) {
+          console.error(
+            `Failed to add user ${userData.email} to team:`,
+            memberError
+          );
+        }
+      }
+
+      const ownerUserData = await userDataModel.findByUserId(company.createdBy);
 
       try {
-        if (userData) {
+        if (ownerUserData) {
           await sendCompanyApprovedEmail(
-            userData.email,
+            ownerUserData.email,
             company.companyName,
-            userData.name
+            ownerUserData.name
           );
         }
       } catch (emailError) {
@@ -181,11 +222,13 @@ export const approveCompanyAction = superAdminAction
 
       revalidatePath("/admin");
       revalidatePath("/admin/companies");
+      revalidatePath(`/admin/companies/${companyId}`);
 
       return {
         success: true,
         message: "Company approved successfully",
-        teamId: team.$id,
+        companyId: companyId,
+        teamId: team.$id, // This equals companyId
       };
     } catch (error) {
       console.error("Approve company error:", error);
@@ -211,12 +254,24 @@ export const rejectCompanyAction = superAdminAction
         return { error: "Company is not pending approval" };
       }
 
-      await companyModel.updateById(companyId, {
-        status: "rejected",
-        rejectedBy: ctx.userId,
-        rejectedAt: new Date().toISOString(),
-        rejectionReason: reason,
-      });
+      await companyModel.updateById(
+        companyId,
+        {
+          status: "rejected",
+          rejectedBy: ctx.userId,
+          rejectedAt: new Date().toISOString(),
+          rejectionReason: reason,
+          currentStep: 2,
+        },
+        [
+          Permission.read(Role.user(company.createdBy)),
+          Permission.update(Role.user(company.createdBy)),
+
+          Permission.read(Role.label("superadmin")),
+          Permission.update(Role.label("superadmin")),
+          Permission.delete(Role.label("superadmin")),
+        ]
+      );
 
       const userDataModel = new UserDataAdminModel();
       const userData = await userDataModel.findByUserId(company.createdBy);

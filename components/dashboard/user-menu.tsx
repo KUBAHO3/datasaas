@@ -10,16 +10,29 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { signOutAction } from "@/lib/services/actions/auth.actions"
 import { UserCircle, Settings, LogOut, ChevronDown } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 export default function UserMenu({
     user,
-    onSignOut,
 }: {
     user: { name: string; email: string; role: string }
-    onSignOut?: () => void
 }) {
+    const router = useRouter();
+
+    async function handleSignOut() {
+        try {
+            await signOutAction();
+            toast.success("Signed out successfully");
+            router.push("/sign-in");
+        } catch (error) {
+            toast.error("Failed to sign out");
+        }
+    }
+
     return (
         <div className="border-t p-4">
             <DropdownMenu>
@@ -65,7 +78,7 @@ export default function UserMenu({
                     <DropdownMenuSeparator />
 
                     <DropdownMenuItem
-                        onClick={onSignOut}
+                        onClick={handleSignOut}
                         className="text-destructive cursor-pointer"
                     >
                         <LogOut className="mr-2 h-4 w-4" />

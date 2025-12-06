@@ -9,14 +9,17 @@ export default async function HomePage() {
   if (userContext) {
     if (userContext.isSuperAdmin) {
       redirect('/admin');
-    } else {
-      redirect('/dashboard');
     }
+
+    if (userContext.companyId) {
+      redirect(`/org/${userContext.companyId}`);
+    }
+
+    redirect('/onboarding');
   }
 
   return (
     <div className="flex min-h-screen flex-col mx-auto">
-      {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="container mx-auto flex h-16 items-center justify-between px-6">
           <div className="flex items-center gap-2">
@@ -73,7 +76,7 @@ export default async function HomePage() {
                 </div>
                 <h3 className="text-xl font-semibold mb-2">Custom Forms</h3>
                 <p className="text-muted-foreground">
-                  Build dynamic forms with drag-and-drop interface
+                  Build dynamic forms with our intuitive drag-and-drop builder
                 </p>
               </div>
 
@@ -85,7 +88,7 @@ export default async function HomePage() {
                 </div>
                 <h3 className="text-xl font-semibold mb-2">Data Management</h3>
                 <p className="text-muted-foreground">
-                  Store and organize your data securely
+                  Store, search, and manage your data efficiently and securely
                 </p>
               </div>
 
@@ -95,21 +98,15 @@ export default async function HomePage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Analytics</h3>
+                <h3 className="text-xl font-semibold mb-2">Analytics & Reports</h3>
                 <p className="text-muted-foreground">
-                  Visualize and analyze your collected data
+                  Generate insights with powerful analytics and custom reports
                 </p>
               </div>
             </div>
           </div>
         </section>
       </div>
-
-      <footer className="border-t py-6">
-        <div className="container px-6 text-center text-sm text-muted-foreground">
-          © 2024 DataSaaS. All rights reserved.
-        </div>
-      </footer>
     </div>
   );
 }

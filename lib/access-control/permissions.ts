@@ -1,6 +1,7 @@
+import "server-only";
+
 import { cookies } from "next/headers";
 import { cache } from "react";
-import "server-only";
 import { AUTH_COOKIE } from "../constants";
 import { SessionAccountService } from "../services/core/base-account";
 import { UserDataAdminModel } from "../services/models/users.model";
@@ -13,9 +14,8 @@ export interface UserContext {
   name: string;
   isSuperAdmin: boolean;
   isAuthenticated: boolean;
-  teamId?: string;
   companyId?: string;
-  role?: string; // owner, admin, editor, viewer
+  role?: string;
   labels: string[];
   userData: UserData | null;
 }
@@ -44,7 +44,6 @@ export const getCurrentUserContext = cache(
         name: user.name,
         isSuperAdmin,
         isAuthenticated: true,
-        teamId: userData?.teamId,
         companyId: userData?.companyId,
         role: userData?.role,
         labels: user.labels || [],
@@ -71,7 +70,10 @@ export async function requireSuperAdmin(): Promise<UserContext> {
   const userContext = await requireAuth();
 
   if (!userContext.isSuperAdmin) {
-    redirect("/dashboard");
+    if (userContext.companyId) {
+      redirect(`/org/${userContext.companyId}`);
+    }
+    redirect("/onboarding");
   }
 
   return userContext;
@@ -79,47 +81,36 @@ export async function requireSuperAdmin(): Promise<UserContext> {
 
 export async function requireCompany(): Promise<UserContext> {
   const userContext = await requireAuth();
-
-  if (!userContext.companyId || !userContext.teamId) {
+  if (!userContext.companyId) {
     redirect("/onboarding");
   }
-
   return userContext;
 }
 
-export async function requireCompanyAccess(
-  companyId: string
-): Promise<UserContext> {
-  const userContext = await requireCompany();
-
-  // Super admins can access any company
-  if (userContext.isSuperAdmin) {
-    return userContext;
+export async function requireCompanyAccess(orgId: string) {
+  const userContext = await requireAuth();
+  if (userContext.isSuperAdmin) return userContext;
+  if (!userContext.companyId) redirect("/onboarding");
+  if (userContext.companyId !== orgId) {
+    redirect(`/org/${userContext.companyId}`);
   }
-
-  // Check if user belongs to the requested company
-  if (userContext.companyId !== companyId) {
-    redirect("/dashboard");
-  }
-
   return userContext;
 }
 
 export async function requireRole(
   allowedRoles: string[],
-  companyId?: string
+  orgId?: string
 ): Promise<UserContext> {
-  const userContext = companyId
-    ? await requireCompanyAccess(companyId)
+  const userContext = orgId
+    ? await requireCompanyAccess(orgId)
     : await requireCompany();
 
-  // Super admins bypass role checks
   if (userContext.isSuperAdmin) {
     return userContext;
   }
 
   if (!userContext.role || !allowedRoles.includes(userContext.role)) {
-    redirect("/dashboard");
+    redirect(`/org/${userContext.companyId}`);
   }
 
   return userContext;

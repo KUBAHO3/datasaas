@@ -4,29 +4,29 @@ import { getOnboardingProgress } from "@/lib/services/actions/onboarding.actions
 import { redirect } from "next/navigation";
 
 export default async function Step2Page() {
-    await requireAuth();
+    const userContext = await requireAuth();
 
-    const progress = await getOnboardingProgress();
+    const company = await getOnboardingProgress();
 
-    if (progress.currentStep > 2 && progress.currentStep < 6 && progress.status === "in_progress") {
-        redirect(`/onboarding/step-${progress.currentStep}`);
+    if (company.currentStep > 2 && company.currentStep < 6 && company.status === "draft") {
+        redirect(`/onboarding/step-${company.currentStep}`);
     }
 
-    if (progress.status === "submitted" || progress.status === "rejected") {
+    if (company.status === "pending" || company.status === "rejected") {
         redirect("/onboarding/pending-approval");
     }
 
-    if (progress.status === "approved") {
-        redirect("/dashboard");
+    if (company.status === "active" && userContext.companyId) {
+        redirect(`/org/${userContext.companyId}`);
     }
 
     const initialData = {
-        companyName: progress.companyName || "",
-        industry: progress.industry || "",
-        size: progress.size || "",
-        website: progress.website || "",
-        phone: progress.phone || "",
-        description: progress.description || "",
+        companyName: company.companyName || "",
+        industry: company.industry || "",
+        size: company.size || "",
+        website: company.website || "",
+        phone: company.phone || "",
+        description: company.description || "",
     };
 
     return <CompanyBasicInfoForm initialData={initialData} />;

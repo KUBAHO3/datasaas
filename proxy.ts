@@ -5,14 +5,13 @@ export async function proxy(request: NextRequest) {
   const session = request.cookies.get(AUTH_COOKIE);
   const { pathname } = request.nextUrl;
 
-   const publicRoutes = [
+  const publicRoutes = [
     "/auth/sign-in",
     "/auth/sign-up",
     "/auth/forgot-password",
     "/auth/verify-email",
     "/auth/google-callback",
-    "/auth/forgot-password",
-    "/auth/reset-password"
+    "/auth/reset-password",
   ];
 
   const isPublicRoute = publicRoutes.some((route) =>
@@ -20,8 +19,8 @@ export async function proxy(request: NextRequest) {
   );
 
   const protectedRoutes = [
-    "/admin", 
-    "/dashboard", 
+    "/admin",
+    "/org",
     "/onboarding",
     "/pending-approval",
   ];
@@ -41,7 +40,7 @@ export async function proxy(request: NextRequest) {
 
   if (session && isPublicRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 

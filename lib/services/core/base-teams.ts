@@ -109,6 +109,11 @@ export class AdminTeamsService {
     return await client.teams.create(ID.unique(), options.name, options.roles);
   }
 
+  async createWithId(teamId: string, name: string, roles?: string[]) {
+    const client = await this.getClient();
+    return await client.teams.create(teamId, name, roles);
+  }
+
   async get(teamId: string) {
     const client = await this.getClient();
     return await client.teams.get(teamId);
@@ -122,5 +127,60 @@ export class AdminTeamsService {
   async delete(teamId: string) {
     const client = await this.getClient();
     return await client.teams.delete(teamId);
+  }
+
+  async listMemberships(teamId: string, queries?: string[]) {
+    const client = await this.getClient();
+    return await client.teams.listMemberships(teamId, queries);
+  }
+
+  async createMembership(
+    teamId: string,
+    roles: string[],
+    email?: string,
+    url?: string,
+    userId?: string,
+    phone?: string,
+    name?: string
+  ) {
+    const client = await this.getClient();
+    return await client.teams.createMembership(
+      teamId,
+      roles,
+      email,
+      url,
+      userId,
+      phone,
+      name
+    );
+  }
+
+  async getMembership(teamId: string, membershipId: string) {
+    const client = await this.getClient();
+    return await client.teams.getMembership(teamId, membershipId);
+  }
+
+  async updateMembershipRoles(
+    teamId: string,
+    membershipId: string,
+    roles: string[]
+  ) {
+    const client = await this.getClient();
+    return await client.teams.updateMembership(teamId, membershipId, roles);
+  }
+
+  async deleteMembership(teamId: string, membershipId: string) {
+    const client = await this.getClient();
+    return await client.teams.deleteMembership(teamId, membershipId);
+  }
+
+  async getPrefs(teamId: string) {
+    const client = await this.getClient();
+    return await client.teams.getPrefs(teamId);
+  }
+
+  async updatePrefs(teamId: string, prefs: object) {
+    const client = await this.getClient();
+    return await client.teams.updatePrefs(teamId, prefs);
   }
 }

@@ -28,6 +28,8 @@ export function ReviewSubmission({ progress }: ReviewSubmissionProps) {
                     description: "Your application is now under review."
                 });
                 router.push("/onboarding/pending-approval");
+            } else if (result?.data?.error) {
+                toast.error(result.data.error);
             } else if (result?.serverError) {
                 toast.error(result.serverError);
             }
@@ -38,7 +40,6 @@ export function ReviewSubmission({ progress }: ReviewSubmissionProps) {
         }
     }
 
-    // Check if all required fields are complete
     const isCompanyBasicInfoComplete = Boolean(
         progress.companyName &&
         progress.industry &&

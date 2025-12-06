@@ -1,35 +1,49 @@
 import { Models } from "node-appwrite";
 
+export type CompanyStatus =
+  | "draft"
+  | "pending"
+  | "active"
+  | "rejected"
+  | "suspended";
+
 export type Company = Models.Document & {
+  createdBy: string;
+  currentStep: number;
+  completedSteps: number[];
+  status: CompanyStatus;
+
   companyName: string;
-  name?: string;
-  email: string;
-  phone?: string;
-  website?: string;
   industry?: string;
   size?: string;
+  website?: string;
+  phone?: string;
+  email: string;
   description?: string;
-  logo?: string;
-  address?: string;
+
+  street?: string;
   city?: string;
   state?: string;
   country?: string;
   zipCode?: string;
-  status: "pending" | "active" | "suspended" | "rejected";
-  teamId?: string;
+
+  taxId?: string; 
+  logoFileId?: string; 
+
+  businessRegistrationFileId?: string;
+  taxDocumentFileId?: string;
+  proofOfAddressFileId?: string;
+  certificationsFileIds?: string[]; 
+
+  submittedAt?: string;
   approvedBy?: string;
   approvedAt?: string;
   rejectedBy?: string;
   rejectedAt?: string;
   rejectionReason?: string;
-  createdBy: string;
-};
+  adminNotes?: string;
 
-export interface DashboardStats {
-  totalCompanies: number;
-  activeCompanies: number;
-  pendingApplications: number;
-  suspendedCompanies: number;
-  totalUsers: number;
-  recentApplications: Company[];
-}
+  suspendedBy?: string;
+  suspendedAt?: string;
+  suspensionReason?: string;
+};

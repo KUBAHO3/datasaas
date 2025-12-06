@@ -5,10 +5,6 @@ import {
   AdminAccountService,
   SessionAccountService,
 } from "../core/base-account";
-import {
-  OnboardingAdminModel,
-  OnboardingSessionModel,
-} from "../models/onboarding.model";
 import { AdminUsersService, UserDataAdminModel } from "../models/users.model";
 import { signUpSchema } from "@/lib/schemas/user-schema";
 import { action, authAction } from "@/lib/safe-action";
@@ -19,13 +15,18 @@ import {
   documentsSchema,
 } from "@/lib/schemas/onboarding-schemas";
 import { revalidatePath } from "next/cache";
-import { CompanyAdminModel } from "../models/company.model";
-import { OnboardingProgressWithArrays } from "@/lib/types/onboarding-types";
+import {
+  CompanyAdminModel,
+  CompanySessionModel,
+} from "../models/company.model";
+import { Company } from "@/lib/types/company-types";
 import { redirect } from "next/navigation";
+import { isOnboardingComplete } from "@/lib/utils/company-utis";
+import { cookies } from "next/headers";
 
-export async function getOnboardingProgress(): Promise<OnboardingProgressWithArrays> {
+export async function getOnboardingProgress(): Promise<Company> {
   try {
-    const cookieStore = await import("next/headers").then((m) => m.cookies());
+    const cookieStore = await cookies();
     const session = cookieStore.get(AUTH_COOKIE);
 
     if (!session) {
@@ -35,15 +36,15 @@ export async function getOnboardingProgress(): Promise<OnboardingProgressWithArr
     const sessionAccountService = new SessionAccountService();
     const user = await sessionAccountService.get();
 
-    const onboardingModel = new OnboardingSessionModel();
-    let progress = await onboardingModel.findByUserId(user.$id);
+    const companyModel = new CompanySessionModel();
+    let company = await companyModel.findByUserId(user.$id);
 
-    if (!progress) {
-      const adminModel = new OnboardingAdminModel();
-      progress = await adminModel.createProgress(user.$id);
+    if (!company) {
+      const adminModel = new CompanyAdminModel();
+      company = await adminModel.createDraft(user.$id, user.email);
     }
 
-    return progress;
+    return company;
   } catch (error) {
     console.error("Failed to get onboarding progress:", error);
     redirect("/auth/sign-in");
@@ -78,8 +79,8 @@ export const signUpAction = action
         role: parsedInput.jobTitle,
       });
 
-      const onboardingModel = new OnboardingAdminModel();
-      await onboardingModel.createProgress(user.$id);
+      const companyModel = new CompanyAdminModel();
+      await companyModel.createDraft(user.$id, user.email);
 
       const adminAccountService = new AdminAccountService();
       await adminAccountService.createSession(
@@ -105,9 +106,9 @@ export const saveCompanyBasicInfo = authAction
   .schema(companyBasicInfoSchema)
   .action(async ({ parsedInput, ctx }) => {
     try {
-      const onboardingModel = new OnboardingAdminModel();
+      const companyModel = new CompanyAdminModel();
 
-      await onboardingModel.updateProgress(ctx.userId, {
+      await companyModel.updateProgress(ctx.userId, {
         companyName: parsedInput.companyName,
         industry: parsedInput.industry,
         size: parsedInput.size,
@@ -115,7 +116,7 @@ export const saveCompanyBasicInfo = authAction
         phone: parsedInput.phone,
         description: parsedInput.description,
         currentStep: 3,
-        completedSteps: [1,2],
+        completedSteps: [1, 2],
       });
 
       revalidatePath("/onboarding");
@@ -136,16 +137,16 @@ export const saveCompanyAddress = authAction
   .schema(companyAddressSchema)
   .action(async ({ parsedInput, ctx }) => {
     try {
-      const onboardingModel = new OnboardingAdminModel();
+      const companyModel = new CompanyAdminModel();
 
-      await onboardingModel.updateProgress(ctx.userId, {
+      await companyModel.updateProgress(ctx.userId, {
         street: parsedInput.street,
         city: parsedInput.city,
         state: parsedInput.state,
         country: parsedInput.country,
         zipCode: parsedInput.zipCode,
         currentStep: 4,
-        completedSteps: [1,2,3],
+        completedSteps: [1, 2, 3],
       });
 
       revalidatePath("/onboarding");
@@ -166,9 +167,9 @@ export const saveCompanyBranding = authAction
   .schema(companyBrandingSchema)
   .action(async ({ parsedInput, ctx }) => {
     try {
-      const onboardingModel = new OnboardingAdminModel();
+      const companyModel = new CompanyAdminModel();
 
-      await onboardingModel.updateProgress(ctx.userId, {
+      await companyModel.updateProgress(ctx.userId, {
         taxId: parsedInput.taxId,
         logoFileId: parsedInput.logoFileId,
         currentStep: 5,
@@ -193,9 +194,9 @@ export const saveDocuments = authAction
   .schema(documentsSchema)
   .action(async ({ parsedInput, ctx }) => {
     try {
-      const onboardingModel = new OnboardingAdminModel();
+      const companyModel = new CompanyAdminModel();
 
-      await onboardingModel.updateProgress(ctx.userId, {
+      await companyModel.updateProgress(ctx.userId, {
         businessRegistrationFileId: parsedInput.businessRegistrationFileId,
         taxDocumentFileId: parsedInput.taxDocumentFileId,
         proofOfAddressFileId: parsedInput.proofOfAddressFileId,
@@ -218,65 +219,28 @@ export const saveDocuments = authAction
 
 export const submitOnboarding = authAction.action(async ({ ctx }) => {
   try {
-    const onboardingModel = new OnboardingAdminModel();
-    const progress = await onboardingModel.findByUserId(ctx.userId);
+    const companyModel = new CompanyAdminModel();
+    const company = await companyModel.findByUserId(ctx.userId);
 
-    if (!progress) {
-      return { error: "Onboarding progress not found" };
+    if (!company) {
+      return { error: "Company not found" };
     }
 
-    if (
-      !progress.companyName ||
-      !progress.industry ||
-      !progress.size ||
-      !progress.phone ||
-      !progress.street ||
-      !progress.city ||
-      !progress.state ||
-      !progress.country ||
-      !progress.zipCode ||
-      !progress.taxId ||
-      !progress.businessRegistrationFileId ||
-      !progress.taxDocumentFileId ||
-      !progress.proofOfAddressFileId
-    ) {
+    if (!isOnboardingComplete(company)) {
       return { error: "Please complete all steps before submitting" };
     }
 
-    if (progress.status === "submitted") {
+    if (company.status === "pending") {
       return { error: "Application already submitted" };
     }
 
-    const companyModel = new CompanyAdminModel();
-    const company = await companyModel.create({
-      companyName: progress.companyName,
-      email: ctx.email,
-      phone: progress.phone,
-      website: progress.website,
-      industry: progress.industry,
-      size: progress.size,
-      description: progress.description,
-      address: progress.street,
-      city: progress.city,
-      state: progress.state,
-      country: progress.country,
-      zipCode: progress.zipCode,
-      logoFileId: progress.logoFileId,
-      status: "pending",
-      createdBy: ctx.userId,
-    });
-
-    await onboardingModel.updateProgress(ctx.userId, {
-      status: "submitted",
-      companyId: company.$id,
-      completedSteps: [1, 2, 3, 4, 5, 6],
-    });
+    const updatedCompany = await companyModel.submitForApproval(ctx.userId);
 
     const userDataModel = new UserDataAdminModel();
     const userData = await userDataModel.findByUserId(ctx.userId);
     if (userData) {
       await userDataModel.updateById(userData.$id, {
-        companyId: company.$id,
+        companyId: updatedCompany.$id,
       });
     }
 
@@ -288,7 +252,7 @@ export const submitOnboarding = authAction.action(async ({ ctx }) => {
     return {
       success: true,
       message: "Application submitted successfully",
-      companyId: company.$id,
+      companyId: updatedCompany.$id,
     };
   } catch (error) {
     console.error("Submit onboarding error:", error);
@@ -301,30 +265,29 @@ export const submitOnboarding = authAction.action(async ({ ctx }) => {
 
 export const resubmitOnboarding = authAction.action(async ({ ctx }) => {
   try {
-    const onboardingModel = new OnboardingAdminModel();
-    const progress = await onboardingModel.findByUserId(ctx.userId);
+    const companyModel = new CompanyAdminModel();
+    const company = await companyModel.findByUserId(ctx.userId);
 
-    if (!progress) {
+    if (!company) {
       return { error: "Onboarding progress not found" };
     }
 
-    if (progress.status !== "rejected") {
+    if (company.status !== "rejected") {
       return { error: "Only rejected applications can be resubmitted" };
     }
 
-    if (!progress.companyId) {
+    if (!company.companyId) {
       return { error: "No company found for resubmission" };
     }
 
-    const companyModel = new CompanyAdminModel();
-    await companyModel.updateById(progress.companyId, {
+    await companyModel.updateById(company.companyId, {
       status: "pending",
       rejectedBy: undefined,
       rejectedAt: undefined,
       rejectionReason: undefined,
     });
 
-    await onboardingModel.updateProgress(ctx.userId, {
+    await company.updateProgress(ctx.userId, {
       status: "submitted",
       rejectionReason: undefined,
     });
