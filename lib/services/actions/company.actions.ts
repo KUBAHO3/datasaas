@@ -16,7 +16,7 @@ import {
 } from "@/lib/schemas/company-schemas";
 import { AdminUsersService, UserDataAdminModel } from "../models/users.model";
 import { AdminTeamsService } from "../core/base-teams";
-import { action, superAdminAction } from "@/lib/safe-action";
+import { action, authAction, superAdminAction } from "@/lib/safe-action";
 import {
   sendCompanyActivatedEmail,
   sendCompanyApprovedEmail,
@@ -28,6 +28,8 @@ import { FindOptions, WhereClause } from "../core/base-db-model";
 import { Permission, Role } from "node-appwrite";
 import { cache } from "react";
 import { getUserTeamRole, verifyTeamMembership } from "./users.action";
+import { FormSubmissionAdminModel } from "../models/form-submission.model";
+import { FormAdminModel } from "../models/form.model";
 
 interface CompaniesFilters {
   status?: string;
@@ -794,17 +796,15 @@ export const getDashboardStats = cache(
     try {
       const userDataModel = new UserDataAdminModel();
 
-      // Count total users in the company
       const totalUsers = await userDataModel.count({
         where: [{ field: "companyId", operator: "equals", value: companyId }],
       });
 
-      // TODO: Replace with actual form and submission counts when those features are built
       const stats: DashboardStats = {
         totalForms: 0,
         totalSubmissions: 0,
         totalUsers,
-        activeUsers: totalUsers, // For now, assume all users are active
+        activeUsers: totalUsers,
       };
 
       return stats;
@@ -830,7 +830,6 @@ export const getCompanyDashboard = cache(
         return null;
       }
 
-      // Check team membership if company is approved
       let isMember = false;
       let userRole = "viewer";
 
@@ -841,7 +840,6 @@ export const getCompanyDashboard = cache(
         }
       }
 
-      // Get dashboard stats only for active companies
       const stats =
         company.status === "active"
           ? await getDashboardStats(companyId)
@@ -864,3 +862,45 @@ export const getCompanyDashboard = cache(
     }
   }
 );
+
+export const getDashboardStatsAction = authAction.action(async ({ ctx }) => {
+  try {
+    const companyModel = new CompanyAdminModel();
+    const company = await companyModel.findByUserId(ctx.userId);
+
+    if (!company) {
+      return { error: "Company not found" };
+    }
+
+    const formModel = new FormAdminModel();
+    const forms = await formModel.listByCompany(company.$id);
+    const publishedForms = forms.filter((f) => f.status === "published");
+
+    const submissionModel = new FormSubmissionAdminModel();
+    const submissions = await submissionModel.listByCompany(company.$id);
+    const completedSubmissions = submissions.filter(
+      (s) => s.status === "completed"
+    );
+
+    const teamsService = new AdminTeamsService();
+    const teamMembers = await teamsService.listMemberships(company.$id);
+
+    const stats: DashboardStats = {
+      totalForms: forms.length,
+      totalSubmissions: completedSubmissions.length,
+      totalUsers: teamMembers.total,
+      activeUsers: teamMembers.memberships.filter((m) => m.confirm).length,
+      
+    };
+
+    return { success: true, stats };
+  } catch (error) {
+    console.error("Get dashboard stats error:", error);
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to get dashboard stats",
+    };
+  }
+});

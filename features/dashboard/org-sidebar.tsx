@@ -12,6 +12,7 @@ import {
     ChevronRight,
     LogOut,
     User,
+    FileText,
 } from "lucide-react";
 
 import {
@@ -61,6 +62,11 @@ export function OrgSidebar({ orgId, user, companyName }: OrgSidebarProps) {
             icon: LayoutDashboard,
         },
         {
+            title: "Forms",
+            href: `/org/${orgId}/forms`,
+            icon: FileText,
+        },
+        {
             title: "Data Collection",
             href: `/org/${orgId}/data-collection`,
             icon: Database,
@@ -76,7 +82,6 @@ export function OrgSidebar({ orgId, user, companyName }: OrgSidebarProps) {
             icon: Settings,
         },
     ];
-
     async function handleSignOut() {
         try {
             await signOutAction();
