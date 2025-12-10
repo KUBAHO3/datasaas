@@ -12,6 +12,8 @@ import {
 import { CompanyAdminModel } from "../models/company.model";
 import { FormAdminModel, FormSessionModel } from "../models/form.model";
 import { revalidatePath } from "next/cache";
+import { generateFormPermissions } from "@/lib/utils/forms-utils";
+import { Permission, Role } from "node-appwrite";
 
 export const createFormAction = authAction
   .inputSchema(createFormSchema)
@@ -33,6 +35,7 @@ export const createFormAction = authAction
       const formModel = new FormAdminModel();
       const form = await formModel.createFormWithDefaults(
         company.$id,
+        company.$id,
         ctx.userId,
         name,
         description
@@ -45,7 +48,12 @@ export const createFormAction = authAction
         formId: form.$id,
         form,
       };
-    } catch (error) {}
+    } catch (error) {
+      console.error("Create form error:", error);
+      return {
+        error: error instanceof Error ? error.message : "Failed to create form",
+      };
+    }
   });
 
 export const updateFormAction = authAction
@@ -72,6 +80,23 @@ export const updateFormAction = authAction
         ...updateData,
         updatedBy: ctx.userId,
       });
+
+      if (updateData.accessControl || updateData.settings) {
+        const mergedForm = {
+          ...existingForm,
+          ...updateData,
+          accessControl: updateData.accessControl || existingForm.accessControl,
+          settings: updateData.settings || existingForm.settings,
+        };
+
+        const newPermissions = generateFormPermissions(
+          mergedForm,
+          company.$id,
+          existingForm.createdBy
+        );
+
+        await formModel.updatePermissions(formId, newPermissions);
+      }
 
       revalidatePath(`/org/${company.$id}/forms`);
       revalidatePath(`/org/${company.$id}/forms/${formId}`);
@@ -118,6 +143,14 @@ export const publishFormAction = authAction
         updatedBy: ctx.userId,
       });
 
+      const permissions = generateFormPermissions(
+        publishedForm,
+        company.$id,
+        form.createdBy
+      );
+
+      await formModel.updatePermissions(formId, permissions);
+
       revalidatePath(`/org/${company.$id}/forms`);
       revalidatePath(`/org/${company.$id}/forms/${formId}`);
 
@@ -159,6 +192,18 @@ export const archiveFormAction = authAction
         status: "archived",
         updatedBy: ctx.userId,
       });
+
+      const permissions = [
+        Permission.read(Role.team(company.$id)),
+        Permission.update(Role.user(form.createdBy)),
+        Permission.update(Role.team(company.$id, "owner")),
+        Permission.update(Role.team(company.$id, "admin")),
+        Permission.delete(Role.user(form.createdBy)),
+        Permission.delete(Role.team(company.$id, "owner")),
+        Permission.delete(Role.team(company.$id, "admin")),
+      ];
+
+      await formModel.updatePermissions(formId, permissions);
 
       revalidatePath(`/org/${company.$id}/forms`);
       revalidatePath(`/org/${company.$id}/forms/${formId}`);

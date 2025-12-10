@@ -1,3 +1,4 @@
+import { Permission, Role } from "node-appwrite";
 import { Form, FormField, FormSubmission } from "../types/form-types";
 
 export const FormHelpers = {
@@ -51,7 +52,7 @@ export const SubmissionHelpers = {
 
     return dbSubmission;
   },
-  
+
   fromDB(dbSubmission: any): FormSubmission {
     const submission: any = { ...dbSubmission };
 
@@ -72,7 +73,9 @@ export function createDefaultField(type: string, order: number): FormField {
   const baseField = {
     id: `field-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     type,
-    label: `${type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())} Field`,
+    label: `${type
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (l) => l.toUpperCase())} Field`,
     description: "",
     placeholder: "",
     required: false,
@@ -82,4 +85,26 @@ export function createDefaultField(type: string, order: number): FormField {
   };
 
   return baseField as FormField;
+}
+
+export function generateFormPermissions(
+  form: any,
+  teamId: string,
+  ownerId: string
+): string[] {
+  const permissions: string[] = [];
+  if (form.accessControl?.visibility === "public" || form.settings?.isPublic) {
+    permissions.push(Permission.read(Role.any()));
+  } else {
+    permissions.push(Permission.read(Role.team(teamId)));
+  }
+  permissions.push(Permission.update(Role.user(ownerId)));
+  permissions.push(Permission.update(Role.team(teamId, "owner")));
+  permissions.push(Permission.update(Role.team(teamId, "admin")));
+
+  permissions.push(Permission.delete(Role.user(ownerId)));
+
+  permissions.push(Permission.delete(Role.team(teamId, "owner")));
+
+  return permissions;
 }

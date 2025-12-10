@@ -12,6 +12,7 @@ export async function proxy(request: NextRequest) {
     "/auth/verify-email",
     "/auth/google-callback",
     "/auth/reset-password",
+    "/forms"
   ];
 
   const isPublicRoute = publicRoutes.some((route) =>

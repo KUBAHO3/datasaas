@@ -14,6 +14,7 @@ import { FormBuilderSidebar } from "./form-builder-sidebar";
 import { FormBuilderCanvas } from "./form-builder-canvas";
 import { FormSettingsPanel } from "./form-settings-panel";
 import { FormThemePanel } from "./form-theme-panel";
+import { FormSharePanel } from "./form-share-panel";
 
 interface FormBuilderProps {
     form: Form;
@@ -56,6 +57,8 @@ export function FormBuilder({ form: initialForm, orgId }: FormBuilderProps) {
         setForm((prev) => ({ ...prev, ...updates }));
         setHasChanges(true);
     }
+
+    console.log("foooorrmmm data: ", form)
 
     return (
         <div className="h-screen flex flex-col">
@@ -130,18 +133,7 @@ export function FormBuilder({ form: initialForm, orgId }: FormBuilderProps) {
                     </TabsContent>
 
                     <TabsContent value="share" className="flex-1 p-6 overflow-auto">
-                        <div className="max-w-2xl mx-auto space-y-6">
-                            <div>
-                                <h2 className="text-2xl font-bold mb-2">Share Your Form</h2>
-                                <p className="text-muted-foreground">
-                                    Configure sharing options and get your form link
-                                </p>
-                            </div>
-                            {/* Share options will be added in Phase 3 */}
-                            <div className="text-center py-12 text-muted-foreground">
-                                Publishing and sharing features coming soon...
-                            </div>
-                        </div>
+                        <FormSharePanel form={form} orgId={orgId} />
                     </TabsContent>
                 </Tabs>
             </div>

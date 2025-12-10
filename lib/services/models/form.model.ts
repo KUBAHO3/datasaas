@@ -8,7 +8,7 @@ import {
 import { AdminDBModel, SessionDBModel } from "../core/base-db-model";
 import { DATABASE_ID, FORMS_TABLE_ID } from "@/lib/env-config";
 import { FormHelpers } from "@/lib/utils/forms-utils";
-import { ID } from "node-appwrite";
+import { ID, Permission, Role } from "node-appwrite";
 
 export class FormSessionModel extends SessionDBModel<Form> {
   constructor() {
@@ -61,9 +61,17 @@ export class FormAdminModel extends AdminDBModel<Form> {
     super(DATABASE_ID, FORMS_TABLE_ID);
   }
 
-  async create(data: Partial<Form>, documentId?: string): Promise<Form> {
+  async create(
+    data: Partial<Form>,
+    documentId?: string,
+    permissions?: string[]
+  ): Promise<Form> {
     const dbData = FormHelpers.toDB(data);
-    const result = await super.create(dbData, documentId || ID.unique());
+    const result = await super.create(
+      dbData,
+      documentId || ID.unique(),
+      permissions
+    );
     return FormHelpers.fromDB(result);
   }
 
@@ -101,8 +109,25 @@ export class FormAdminModel extends AdminDBModel<Form> {
     });
   }
 
+  async updatePermissions(
+    formId: string,
+    permissions: string[]
+  ): Promise<void> {
+    const client = await this.getClient();
+    const databases = client.databases;
+
+    await databases.updateDocument(
+      this.databaseId,
+      this.collectionId,
+      formId,
+      {},
+      permissions
+    );
+  }
+
   async createFormWithDefaults(
     companyId: string,
+    teamId: string,
     userId: string,
     name: string,
     description?: string
@@ -146,30 +171,43 @@ export class FormAdminModel extends AdminDBModel<Form> {
       responseCount: 0,
     };
 
-    return this.create({
-      companyId,
-      name,
-      description,
-      status: "draft",
-      version: 1,
-      isTemplate: false,
-      fields: [],
-      steps: [
-        {
-          id: "step-1",
-          title: "Step 1",
-          description: "",
-          fields: [],
-          order: 1,
-        },
-      ],
-      conditionalLogic: [],
-      settings: defaultSettings,
-      theme: defaultTheme,
-      accessControl: defaultAccessControl,
-      metadata: defaultMetadata,
-      createdBy: userId,
-      updatedBy: userId,
-    });
+    const permissions = [
+      Permission.read(Role.team(teamId)),
+      Permission.update(Role.user(userId)),
+      Permission.delete(Role.user(userId)),
+      Permission.update(Role.team(teamId, "owner")),
+      Permission.delete(Role.team(teamId, "owner")),
+      Permission.update(Role.team(teamId, "admin")),
+    ];
+
+    return this.create(
+      {
+        companyId,
+        name,
+        description,
+        status: "draft",
+        version: 1,
+        isTemplate: false,
+        fields: [],
+        steps: [
+          {
+            id: "step-1",
+            title: "Step 1",
+            description: "",
+            fields: [],
+            order: 1,
+          },
+        ],
+        conditionalLogic: [],
+        settings: defaultSettings,
+        theme: defaultTheme,
+        accessControl: defaultAccessControl,
+        metadata: defaultMetadata,
+        createdBy: userId,
+        updatedBy: userId,
+      },
+      undefined,
+      permissions
+    );
   }
 }

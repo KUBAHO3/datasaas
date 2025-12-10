@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 
 interface FormSettingsPanelProps {
     settings: FormSettings;
@@ -25,6 +24,15 @@ export function FormSettingsPanel({
 
     function updateAccessControl(updates: Partial<FormAccessControl>) {
         onUpdate(settings, { ...accessControl, ...updates });
+    }
+
+    function handleVisibilityChange(visibility: "public" | "team" | "private") {
+        const isPublic = visibility === "public";
+
+        onUpdate(
+            { ...settings, isPublic },
+            { ...accessControl, visibility }
+        );
     }
 
     return (
@@ -48,7 +56,7 @@ export function FormSettingsPanel({
                             id="visibility"
                             value={accessControl.visibility}
                             onChange={(e) =>
-                                updateAccessControl({ visibility: e.target.value as any })
+                                handleVisibilityChange(e.target.value as "public" | "team" | "private")
                             }
                             className="w-full rounded-md border border-input bg-background px-3 py-2"
                         >
@@ -56,6 +64,11 @@ export function FormSettingsPanel({
                             <option value="team">Team - All company members</option>
                             <option value="public">Public - Anyone with link</option>
                         </select>
+                        <p className="text-xs text-muted-foreground">
+                            {accessControl.visibility === "public" && "✓ Form is publicly accessible"}
+                            {accessControl.visibility === "team" && "✓ Only team members can access"}
+                            {accessControl.visibility === "private" && "✓ Most restricted access"}
+                        </p>
                     </div>
 
                     <div className="flex items-center justify-between rounded-lg border p-4">
@@ -83,6 +96,7 @@ export function FormSettingsPanel({
                             onCheckedChange={(checked) =>
                                 updateSettings({ allowAnonymous: checked })
                             }
+                            disabled={settings.requireLogin}
                         />
                     </div>
 
@@ -344,5 +358,5 @@ export function FormSettingsPanel({
                 </CardContent>
             </Card>
         </div>
-    )
+    );
 }

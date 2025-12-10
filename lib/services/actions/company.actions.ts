@@ -53,6 +53,7 @@ export interface DashboardStats {
   totalSubmissions: number;
   totalUsers: number;
   activeUsers: number;
+  publishedForms: any;
 }
 
 export interface DashboardData {
@@ -805,6 +806,7 @@ export const getDashboardStats = cache(
         totalSubmissions: 0,
         totalUsers,
         activeUsers: totalUsers,
+        publishedForms: [],
       };
 
       return stats;
@@ -815,6 +817,7 @@ export const getDashboardStats = cache(
         totalSubmissions: 0,
         totalUsers: 0,
         activeUsers: 0,
+        publishedForms: [],
       };
     }
   }
@@ -848,6 +851,7 @@ export const getCompanyDashboard = cache(
               totalSubmissions: 0,
               totalUsers: 0,
               activeUsers: 0,
+              publishedForms: [],
             };
 
       return {
@@ -890,7 +894,7 @@ export const getDashboardStatsAction = authAction.action(async ({ ctx }) => {
       totalSubmissions: completedSubmissions.length,
       totalUsers: teamMembers.total,
       activeUsers: teamMembers.memberships.filter((m) => m.confirm).length,
-      
+      publishedForms,
     };
 
     return { success: true, stats };
