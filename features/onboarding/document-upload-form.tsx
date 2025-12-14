@@ -6,115 +6,331 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { documentsSchema, DocumentsInput } from "@/lib/schemas/onboarding-schemas";
 import { Button } from "@/components/ui/button";
-import { saveDocuments } from "@/lib/services/actions/onboarding.actions";
+import { saveDocuments, updateDocumentFileId, updateCertificationFileIds, clearDocumentFileId } from "@/lib/services/actions/onboarding.actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FileUploader } from "@/components/upload/file-uploader";
-import { MultiFileUploader } from "@/components/upload/multi-file-uploader";
-import { uploadDocument, uploadMultipleDocuments } from "@/lib/services/actions/file-upload.actions";
+import { MultiFileUploader, ExistingFile } from "@/components/upload/multi-file-uploader";
 import { Loader2 } from "lucide-react";
+import { Organization } from "@/lib/types/appwrite.types";
 
 interface DocumentUploadFormProps {
-    initialData?: DocumentsInput;
+    initialData?: Organization;
     companyId: string;
 }
 
 export function DocumentUploadForm({ initialData, companyId }: DocumentUploadFormProps) {
     const router = useRouter();
     const [isUploading, setIsUploading] = useState(false);
+    const [isLoadingFiles, setIsLoadingFiles] = useState(false);
 
-    const [businessRegFile, setBusinessRegFile] = useState<File | null>(null);
-    const [taxDocFile, setTaxDocFile] = useState<File | null>(null);
-    const [proofAddressFile, setProofAddressFile] = useState<File | null>(null);
+    const [businessRegFile, setBusinessRegFile] = useState<File | string | null>(null);
+    const [taxDocFile, setTaxDocFile] = useState<File | string | null>(null);
+    const [proofAddressFile, setProofAddressFile] = useState<File | string | null>(null);
     const [certificationFiles, setCertificationFiles] = useState<File[]>([]);
+    const [existingCertifications, setExistingCertifications] = useState<ExistingFile[]>([]);
 
     const form = useForm<DocumentsInput>({
         resolver: zodResolver(documentsSchema),
-        defaultValues: initialData || {
-            businessRegistrationFileId: "",
-            taxDocumentFileId: "",
-            proofOfAddressFileId: "",
-            certificationsFileIds: [],
+        defaultValues: {
+            businessRegistrationFileId: initialData?.businessRegistrationFileId || "",
+            taxDocumentFileId: initialData?.taxDocumentFileId || "",
+            proofOfAddressFileId: initialData?.proofOfAddressFileId || "",
+            certificationsFileIds: initialData?.certificationsFileIds || [],
         },
     });
 
-    async function handleBusinessRegChange(file: File | null) {
-        setBusinessRegFile(file);
+    useEffect(() => {
+        async function loadExistingFiles() {
+            if (!initialData) return;
 
+            setIsLoadingFiles(true);
+            try {
+                if (initialData.businessRegistrationFileId) {
+                    const response = await fetch(`/api/upload/document/${initialData.businessRegistrationFileId}`);
+                    const result = await response.json();
+                    if (result?.success) {
+                        setBusinessRegFile(result.file.fileName);
+                    }
+                }
+
+                if (initialData.taxDocumentFileId) {
+                    const response = await fetch(`/api/upload/document/${initialData.taxDocumentFileId}`);
+                    const result = await response.json();
+                    if (result?.success) {
+                        setTaxDocFile(result.file.fileName);
+                    }
+                }
+
+                if (initialData.proofOfAddressFileId) {
+                    const response = await fetch(`/api/upload/document/${initialData.proofOfAddressFileId}`);
+                    const result = await response.json();
+                    if (result?.success) {
+                        setProofAddressFile(result.file.fileName);
+                    }
+                }
+
+                if (initialData.certificationsFileIds && initialData.certificationsFileIds.length > 0) {
+                    const filePromises = initialData.certificationsFileIds.map(async (fileId) => {
+                        const response = await fetch(`/api/upload/document/${fileId}`);
+                        const result = await response.json();
+                        if (result?.success) {
+                            return {
+                                fileId: fileId,
+                                fileName: result.file.fileName,
+                                fileSize: result.file.fileSize,
+                            } as ExistingFile;
+                        }
+                        return null;
+                    });
+
+                    const files = await Promise.all(filePromises);
+                    const validFiles = files.filter((f): f is ExistingFile => f !== null);
+                    setExistingCertifications(validFiles);
+                    console.log("✅ Loaded existing certifications:", validFiles);
+                }
+            } catch (error) {
+                console.error("Failed to load existing files:", error);
+            } finally {
+                setIsLoadingFiles(false);
+            }
+        }
+
+        loadExistingFiles();
+    }, [initialData]);
+
+    async function handleBusinessRegChange(file: File | null) {
         if (file) {
+            setBusinessRegFile(file);
             setIsUploading(true);
             try {
-                const result = await uploadDocument({ file, companyId });
+                // ✅ Create FormData
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("companyId", companyId);
 
-                console.log("bbb: ", result)
+                // ✅ Call API route instead of server action
+                const response = await fetch("/api/upload/document", {
+                    method: "POST",
+                    body: formData,
+                });
 
-                if (result?.data?.success) {
-                    form.setValue("businessRegistrationFileId", result.data.fileId);
+                console.log("📡 Response status:", response.status, response.statusText);
+
+                // Check if response is JSON before parsing
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    const text = await response.text();
+                    console.error("❌ Non-JSON response:", text.substring(0, 500));
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log("📤 Business Registration Upload Result:", result);
+
+                if (result?.success) {
+                    form.setValue("businessRegistrationFileId", result.fileId);
+
+                    await updateDocumentFileId({
+                        field: "businessRegistrationFileId",
+                        fileId: result.fileId,
+                    }).catch(err => {
+                        console.error("Auto-save failed:", err);
+                    });
+
                     toast.success("Business registration uploaded!");
                 } else {
-                    toast.error(result?.data?.error || "Upload failed");
+                    toast.error(result?.error || "Upload failed");
                     setBusinessRegFile(null);
                 }
             } catch (error) {
-                toast.error("Upload failed");
+                console.error("Upload error:", error);
+                toast.error(error instanceof Error ? error.message : "Upload failed");
                 setBusinessRegFile(null);
             } finally {
                 setIsUploading(false);
             }
         } else {
+            const currentFileId = form.getValues("businessRegistrationFileId");
+
+            if (currentFileId) {
+                setIsUploading(true);
+                try {
+                    const deleteResponse = await fetch(`/api/upload/document/${currentFileId}`, {
+                        method: "DELETE",
+                    });
+
+                    if (deleteResponse.ok) {
+                        console.log("🗑️ File deleted from storage:", currentFileId);
+
+                        await clearDocumentFileId({
+                            field: "businessRegistrationFileId",
+                        });
+
+                        toast.success("File removed successfully");
+                    }
+                } catch (error) {
+                    console.error("Failed to delete file:", error);
+                    toast.error("Failed to remove file");
+                } finally {
+                    setIsUploading(false);
+                }
+            }
+
+            setBusinessRegFile(null);
             form.setValue("businessRegistrationFileId", "");
         }
     }
 
     async function handleTaxDocChange(file: File | null) {
-        setTaxDocFile(file);
-
         if (file) {
+            setTaxDocFile(file);
             setIsUploading(true);
             try {
-                const result = await uploadDocument({ file, companyId });
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("companyId", companyId);
 
-                if (result?.data?.success) {
-                    form.setValue("taxDocumentFileId", result.data.fileId);
+                const response = await fetch("/api/upload/document", {
+                    method: "POST",
+                    body: formData,
+                });
+
+
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    const text = await response.text();
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log("📤 Tax Document Upload Result:", result);
+
+                if (result?.success) {
+                    form.setValue("taxDocumentFileId", result.fileId);
+
+                    await updateDocumentFileId({
+                        field: "taxDocumentFileId",
+                        fileId: result.fileId,
+                    }).catch(err => {
+                        console.error("Auto-save failed:", err);
+                    });
+
                     toast.success("Tax document uploaded!");
                 } else {
-                    toast.error(result?.data?.error || "Upload failed");
+                    toast.error(result?.error || "Upload failed");
                     setTaxDocFile(null);
                 }
             } catch (error) {
-                toast.error("Upload failed");
+                console.error("Upload error:", error);
+                toast.error(error instanceof Error ? error.message : "Upload failed");
                 setTaxDocFile(null);
             } finally {
                 setIsUploading(false);
             }
         } else {
+            const currentFileId = form.getValues("taxDocumentFileId");
+
+            if (currentFileId) {
+                setIsUploading(true);
+                try {
+                    const deleteResponse = await fetch(`/api/upload/document/${currentFileId}`, {
+                        method: "DELETE",
+                    });
+
+                    if (deleteResponse.ok) {
+
+                        await clearDocumentFileId({
+                            field: "taxDocumentFileId",
+                        });
+
+                        toast.success("File removed successfully");
+                    }
+                } catch (error) {
+                    console.error("Failed to delete file:", error);
+                    toast.error("Failed to remove file");
+                } finally {
+                    setIsUploading(false);
+                }
+            }
+
+            setTaxDocFile(null);
             form.setValue("taxDocumentFileId", "");
         }
     }
 
     async function handleProofAddressChange(file: File | null) {
-        setProofAddressFile(file);
-
         if (file) {
+            setProofAddressFile(file);
             setIsUploading(true);
             try {
-                const result = await uploadDocument({ file, companyId });
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("companyId", companyId);
 
-                if (result?.data?.success) {
-                    form.setValue("proofOfAddressFileId", result.data.fileId);
+                const response = await fetch("/api/upload/document", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    const text = await response.text();
+                    console.error("❌ Non-JSON response:", text.substring(0, 500));
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                if (result?.success) {
+                    form.setValue("proofOfAddressFileId", result.fileId);
+
+                    await updateDocumentFileId({
+                        field: "proofOfAddressFileId",
+                        fileId: result.fileId,
+                    }).catch(err => {
+                        console.error("Auto-save failed:", err);
+                    });
+
                     toast.success("Proof of address uploaded!");
                 } else {
-                    toast.error(result?.data?.error || "Upload failed");
+                    toast.error(result?.error || "Upload failed");
                     setProofAddressFile(null);
                 }
             } catch (error) {
-                toast.error("Upload failed");
+                console.error("Upload error:", error);
+                toast.error(error instanceof Error ? error.message : "Upload failed");
                 setProofAddressFile(null);
             } finally {
                 setIsUploading(false);
             }
         } else {
+            const currentFileId = form.getValues("proofOfAddressFileId");
+
+            if (currentFileId) {
+                setIsUploading(true);
+                try {
+                    const deleteResponse = await fetch(`/api/upload/document/${currentFileId}`, {
+                        method: "DELETE",
+                    });
+
+                    if (deleteResponse.ok) {
+                        await clearDocumentFileId({
+                            field: "proofOfAddressFileId",
+                        });
+
+                        toast.success("File removed successfully");
+                    }
+                } catch (error) {
+                    console.error("Failed to delete file:", error);
+                    toast.error("Failed to remove file");
+                } finally {
+                    setIsUploading(false);
+                }
+            }
+
+            setProofAddressFile(null);
             form.setValue("proofOfAddressFileId", "");
         }
     }
@@ -125,14 +341,40 @@ export function DocumentUploadForm({ initialData, companyId }: DocumentUploadFor
         if (files.length > 0) {
             setIsUploading(true);
             try {
-                const result = await uploadMultipleDocuments({ files, companyId });
+                const formData = new FormData();
+                files.forEach((file) => formData.append("files", file));
+                formData.append("companyId", companyId);
 
-                if (result?.data?.success) {
-                    const fileIds = result.data.files.map((f) => f.fileId);
-                    form.setValue("certificationsFileIds", fileIds);
+                const response = await fetch("/api/upload/documents", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                const result = await response.json();
+
+                if (result?.success) {
+                    const uploadedFiles: ExistingFile[] = result.files.map((f: { fileId: string; fileName: string; fileSize: number }) => ({
+                        fileId: f.fileId,
+                        fileName: f.fileName,
+                        fileSize: f.fileSize,
+                    }));
+
+                    setExistingCertifications(prev => [...prev, ...uploadedFiles]);
+
+                    setCertificationFiles([]);
+
+                    const allFileIds = [...existingCertifications.map(f => f.fileId), ...uploadedFiles.map(f => f.fileId)];
+                    form.setValue("certificationsFileIds", allFileIds);
+
+                    await updateCertificationFileIds({
+                        fileIds: allFileIds,
+                    }).catch(err => {
+                        console.error("Auto-save certifications failed:", err);
+                    });
+
                     toast.success(`${files.length} certification(s) uploaded!`);
                 } else {
-                    toast.error(result?.data?.error || "Upload failed");
+                    toast.error(result?.error || "Upload failed");
                     setCertificationFiles([]);
                 }
             } catch (error) {
@@ -141,8 +383,37 @@ export function DocumentUploadForm({ initialData, companyId }: DocumentUploadFor
             } finally {
                 setIsUploading(false);
             }
-        } else {
-            form.setValue("certificationsFileIds", []);
+        }
+    }
+
+    async function handleRemoveCertification(fileId: string) {
+        try {
+            const deleteResponse = await fetch(`/api/upload/document/${fileId}`, {
+                method: "DELETE",
+            });
+
+            if (deleteResponse.ok) {
+                console.log("🗑️ Certification file deleted:", fileId);
+
+                setExistingCertifications(prev => prev.filter(f => f.fileId !== fileId));
+
+                const remainingFileIds = existingCertifications
+                    .filter(f => f.fileId !== fileId)
+                    .map(f => f.fileId);
+
+                form.setValue("certificationsFileIds", remainingFileIds);
+
+                await updateCertificationFileIds({
+                    fileIds: remainingFileIds,
+                });
+
+                toast.success("Certification removed successfully");
+            } else {
+                throw new Error("Delete failed");
+            }
+        } catch (error) {
+            console.error("Failed to remove certification:", error);
+            throw error;
         }
     }
 
@@ -183,7 +454,7 @@ export function DocumentUploadForm({ initialData, companyId }: DocumentUploadFor
                             <FileUploader
                                 file={businessRegFile}
                                 onChange={handleBusinessRegChange}
-                                disabled={isUploading}
+                                disabled={isUploading || isLoadingFiles}
                             />
                             {form.formState.errors.businessRegistrationFileId && (
                                 <FieldError>
@@ -202,7 +473,7 @@ export function DocumentUploadForm({ initialData, companyId }: DocumentUploadFor
                             <FileUploader
                                 file={taxDocFile}
                                 onChange={handleTaxDocChange}
-                                disabled={isUploading}
+                                disabled={isUploading || isLoadingFiles}
                             />
                             {form.formState.errors.taxDocumentFileId && (
                                 <FieldError>{form.formState.errors.taxDocumentFileId.message}</FieldError>
@@ -219,7 +490,7 @@ export function DocumentUploadForm({ initialData, companyId }: DocumentUploadFor
                             <FileUploader
                                 file={proofAddressFile}
                                 onChange={handleProofAddressChange}
-                                disabled={isUploading}
+                                disabled={isUploading || isLoadingFiles}
                             />
                             {form.formState.errors.proofOfAddressFileId && (
                                 <FieldError>
@@ -237,9 +508,11 @@ export function DocumentUploadForm({ initialData, companyId }: DocumentUploadFor
                             </FieldDescription>
                             <MultiFileUploader
                                 files={certificationFiles}
+                                existingFiles={existingCertifications}
                                 onChange={handleCertificationsChange}
+                                onRemoveExisting={handleRemoveCertification}
                                 maxFiles={5}
-                                disabled={isUploading}
+                                disabled={isUploading || isLoadingFiles}
                             />
                         </Field>
                     </FieldGroup>
@@ -249,20 +522,25 @@ export function DocumentUploadForm({ initialData, companyId }: DocumentUploadFor
                             type="button"
                             variant="outline"
                             onClick={() => router.push("/onboarding?step=4")}
-                            disabled={isSubmitting || isUploading}
+                            disabled={isSubmitting || isUploading || isLoadingFiles}
                             className="flex-1"
                         >
                             Back
                         </Button>
                         <Button
                             type="submit"
-                            disabled={isSubmitting || isUploading}
+                            disabled={isSubmitting || isUploading || isLoadingFiles}
                             className="flex-1"
                         >
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Saving...
+                                </>
+                            ) : isLoadingFiles ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Loading files...
                                 </>
                             ) : (
                                 "Continue"

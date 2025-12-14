@@ -7,5 +7,7 @@ export default async function Step5Page() {
 
     const progress = await getOnboardingProgress();
 
-    return <DocumentUploadForm initialData={progress.documents} companyId={progress.$id} />;
+    console.log("ppppp: pr", progress)
+
+    return <DocumentUploadForm initialData={progress} companyId={progress.$id} />;
 }

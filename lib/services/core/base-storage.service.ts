@@ -1,6 +1,7 @@
 import "server-only";
 
 import { ID, ImageFormat, ImageGravity, Models } from "node-appwrite";
+import { InputFile } from "node-appwrite/file";
 import { createSessionClient, createAdminClient } from "./appwrite";
 import { AppwriteErrorHandler } from "@/lib/errors/appwrite-errors";
 import { APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID } from "@/lib/env-config";
@@ -39,10 +40,15 @@ export abstract class BaseStorageService {
       const { storage } = await createSessionClient();
       const fileId = ID.unique();
 
+      // ✅ Convert File to InputFile for Node.js
+      const arrayBuffer = await options.file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const inputFile = InputFile.fromBuffer(buffer, options.file.name);
+
       const uploadedFile = await storage.createFile(
         this.bucketId,
         fileId,
-        options.file,
+        inputFile,
         options.permissions
       );
 
@@ -237,10 +243,15 @@ export abstract class AdminStorageService {
       const { storage } = await createAdminClient();
       const fileId = ID.unique();
 
+      // ✅ Convert File to InputFile for Node.js
+      const arrayBuffer = await options.file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const inputFile = InputFile.fromBuffer(buffer, options.file.name);
+
       return await storage.createFile(
         this.bucketId,
         fileId,
-        options.file,
+        inputFile,
         options.permissions
       );
     } catch (error) {

@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { AUTH_COOKIE } from "@/lib/constants";
 import {
   AdminAccountService,
@@ -19,12 +20,12 @@ import {
   CompanyAdminModel,
   CompanySessionModel,
 } from "../models/company.model";
-import { Company } from "@/lib/types/company-types";
 import { redirect } from "next/navigation";
 import { isOnboardingComplete } from "@/lib/utils/company-utis";
 import { cookies } from "next/headers";
+import { Organization } from "@/lib/types/appwrite.types";
 
-export async function getOnboardingProgress(): Promise<Company> {
+export async function getOnboardingProgress(): Promise<Organization> {
   try {
     const cookieStore = await cookies();
     const session = cookieStore.get(AUTH_COOKIE);
@@ -186,6 +187,102 @@ export const saveCompanyBranding = authAction
           error instanceof Error
             ? error.message
             : "Failed to save branding information",
+      };
+    }
+  });
+
+// ✅ Partial update action for individual file uploads (no validation required)
+export const updateDocumentFileId = authAction
+  .schema(
+    z.object({
+      field: z.enum([
+        "businessRegistrationFileId",
+        "taxDocumentFileId",
+        "proofOfAddressFileId",
+      ]),
+      fileId: z.string().min(1),
+    })
+  )
+  .action(async ({ parsedInput, ctx }) => {
+    try {
+      const companyModel = new CompanyAdminModel();
+
+      await companyModel.updateProgress(ctx.userId, {
+        [parsedInput.field]: parsedInput.fileId,
+      });
+
+      revalidatePath("/onboarding");
+
+      return { success: true };
+    } catch (error) {
+      console.error("Update document file ID error:", error);
+      return {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to update document file ID",
+      };
+    }
+  });
+
+// ✅ Update certifications file IDs
+export const updateCertificationFileIds = authAction
+  .schema(
+    z.object({
+      fileIds: z.array(z.string()),
+    })
+  )
+  .action(async ({ parsedInput, ctx }) => {
+    try {
+      const companyModel = new CompanyAdminModel();
+
+      await companyModel.updateProgress(ctx.userId, {
+        certificationsFileIds: parsedInput.fileIds,
+      });
+
+      revalidatePath("/onboarding");
+
+      return { success: true };
+    } catch (error) {
+      console.error("Update certification file IDs error:", error);
+      return {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to update certification file IDs",
+      };
+    }
+  });
+
+// ✅ Clear document file ID from database
+export const clearDocumentFileId = authAction
+  .schema(
+    z.object({
+      field: z.enum([
+        "businessRegistrationFileId",
+        "taxDocumentFileId",
+        "proofOfAddressFileId",
+      ]),
+    })
+  )
+  .action(async ({ parsedInput, ctx }) => {
+    try {
+      const companyModel = new CompanyAdminModel();
+
+      await companyModel.updateProgress(ctx.userId, {
+        [parsedInput.field]: "",
+      });
+
+      revalidatePath("/onboarding");
+
+      return { success: true };
+    } catch (error) {
+      console.error("Clear document file ID error:", error);
+      return {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to clear document file ID",
       };
     }
   });
