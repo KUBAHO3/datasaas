@@ -28,11 +28,23 @@ export const companyBrandingSchema = z.object({
 
 export type CompanyBrandingInput = z.infer<typeof companyBrandingSchema>;
 
+export const uploadDocumentSchema = z.object({
+  file: z
+    .instanceof(File)
+    .refine((file) => file.size <= 10 * 1024 * 1024, "File must be less than 10MB")
+    .refine(
+      (file) => ["application/pdf"].includes(file.type),
+      "Only PDF files allowed"
+    ),
+  companyId: z.string().min(1),
+});
+
 export const documentsSchema = z.object({
-  businessRegistrationFileId: z.string().min(1, "Business registration document is required"),
+  businessRegistrationFileId: z.string().min(1, "Business registration is required"),
   taxDocumentFileId: z.string().min(1, "Tax document is required"),
   proofOfAddressFileId: z.string().min(1, "Proof of address is required"),
-certificationsFileIds: z.array(z.string())
+  certificationsFileIds: z.array(z.string()),
 });
+
 
 export type DocumentsInput = z.infer<typeof documentsSchema>;

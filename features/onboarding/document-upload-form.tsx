@@ -17,7 +17,7 @@ import { Loader2 } from "lucide-react";
 
 interface DocumentUploadFormProps {
     initialData?: DocumentsInput;
-    companyId?: string;
+    companyId: string;
 }
 
 export function DocumentUploadForm({ initialData, companyId }: DocumentUploadFormProps) {
@@ -46,6 +46,8 @@ export function DocumentUploadForm({ initialData, companyId }: DocumentUploadFor
             setIsUploading(true);
             try {
                 const result = await uploadDocument({ file, companyId });
+
+                console.log("bbb: ", result)
 
                 if (result?.data?.success) {
                     form.setValue("businessRegistrationFileId", result.data.fileId);

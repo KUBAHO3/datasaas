@@ -5,10 +5,11 @@ import { Permission, Role } from "node-appwrite";
 import z from "zod";
 import { DocumentStorageService } from "../storage/document-storage.service";
 import { ImageStorageService } from "../storage/image-storage.service";
+import { zfd } from "zod-form-data";
 
 const uploadDocumentSchema = z.object({
-  file: z.instanceof(File),
-  companyId: z.string().optional(),
+  file: zfd.file(),
+  companyId: z.string().min(1),
 });
 
 const uploadImageSchema = z.object({
@@ -36,7 +37,7 @@ export const uploadDocument = authAction
   .action(async ({ parsedInput, ctx }) => {
     try {
       const { file, companyId } = parsedInput;
-      // Accept various PDF MIME types (different browsers may send different types)
+
       const allowedTypes = [
         "application/pdf",
         "application/x-pdf",
@@ -46,7 +47,6 @@ export const uploadDocument = authAction
         "text/x-pdf",
       ];
 
-      // Check both MIME type and file extension as fallback
       const isPdf =
         allowedTypes.includes(file.type) ||
         file.name.toLowerCase().endsWith(".pdf");
