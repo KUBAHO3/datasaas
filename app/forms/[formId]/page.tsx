@@ -56,8 +56,6 @@ export default async function PublicFormPage({ params }: PublicFormPageProps) {
     const isPublicForm =
         form.accessControl.visibility === "public" || form.settings.isPublic;
 
-        console.log("kbhbdhebde: ", isPublicForm)
-
     if (!isPublicForm) {
         if (!userContext) {
             return (

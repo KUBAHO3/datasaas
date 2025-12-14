@@ -109,14 +109,6 @@ export function FormSharePanel({ form, orgId }: FormSharePanelProps) {
                             )}
                         </div>
                     </div>
-
-                    {form.settings.requireLogin && (
-                        <div className="bg-muted/50 p-3 rounded-lg">
-                            <p className="text-sm text-muted-foreground">
-                                ⚠️ Login required - Users must sign in to submit
-                            </p>
-                        </div>
-                    )}
                 </CardContent>
             </Card>
 

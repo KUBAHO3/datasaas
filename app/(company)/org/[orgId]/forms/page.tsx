@@ -14,7 +14,7 @@ export default async function FormsPage({ params }: FormsPageProps) {
     const { orgId } = await params;
     const userContext = await requireCompanyAccess(orgId);
 
-    const canCreate = ["owner", "admin", "editor"].includes(userContext.role || "");
+    const canCreate = ["owner", "admin", "editor", "CEO"].includes(userContext.role || "");
 
     return (
         <div className="flex-1 space-y-6 p-6">
