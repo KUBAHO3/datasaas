@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(appwrite login:*)",
-      "Bash(node reset-appwrite-password.js:*)",
-      "Bash(appwrite functions list:*)"
-    ]
-  }
-}
