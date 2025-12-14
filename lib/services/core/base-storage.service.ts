@@ -228,12 +228,41 @@ export abstract class BaseStorageService {
 export abstract class AdminStorageService {
   constructor(protected bucketId: string) {}
 
-  async uploadFile(file: File, fileId?: string): Promise<Models.File> {
+  /**
+   * Upload a file with optional permissions
+   * @param options - Upload options containing file and optional permissions
+   */
+  async uploadFile(options: UploadFileOptions): Promise<Models.File> {
     try {
       const { storage } = await createAdminClient();
-      const id = fileId || ID.unique();
+      const fileId = ID.unique();
 
-      return await storage.createFile(this.bucketId, id, file);
+      return await storage.createFile(
+        this.bucketId,
+        fileId,
+        options.file,
+        options.permissions
+      );
+    } catch (error) {
+      throw AppwriteErrorHandler.handle(error);
+    }
+  }
+
+  /**
+   * Upload multiple files with optional permissions
+   * @param files - Array of files to upload
+   * @param permissions - Optional permissions to apply to all files
+   */
+  async uploadMultipleFiles(
+    files: File[],
+    permissions?: string[]
+  ): Promise<Models.File[]> {
+    const uploadPromises = files.map((file) =>
+      this.uploadFile({ file, permissions })
+    );
+
+    try {
+      return await Promise.all(uploadPromises);
     } catch (error) {
       throw AppwriteErrorHandler.handle(error);
     }
@@ -254,6 +283,19 @@ export abstract class AdminStorageService {
     try {
       const { storage } = await createAdminClient();
       await storage.deleteFile(this.bucketId, fileId);
+    } catch (error) {
+      throw AppwriteErrorHandler.handle(error);
+    }
+  }
+
+  /**
+   * Delete multiple files
+   */
+  async deleteMultipleFiles(fileIds: string[]): Promise<void> {
+    const deletePromises = fileIds.map((fileId) => this.deleteFile(fileId));
+
+    try {
+      await Promise.all(deletePromises);
     } catch (error) {
       throw AppwriteErrorHandler.handle(error);
     }

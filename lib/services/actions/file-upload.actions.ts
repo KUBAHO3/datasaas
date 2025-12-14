@@ -2,42 +2,38 @@
 
 import { authAction } from "@/lib/safe-action";
 import { Permission, Role } from "node-appwrite";
-import z from "zod";
-import { DocumentStorageService } from "../storage/document-storage.service";
-import { ImageStorageService } from "../storage/image-storage.service";
 import { zfd } from "zod-form-data";
+import { DocumentStorageAdminService, DocumentStorageService } from "../storage/document-storage.service";
+import { ImageStorageService } from "../storage/image-storage.service";
 
-const uploadDocumentSchema = z.object({
+const uploadDocumentSchema = zfd.formData({
   file: zfd.file(),
-  companyId: z.string().min(1),
+  companyId: zfd.text(),
 });
 
-const uploadImageSchema = z.object({
-  file: z.instanceof(File),
-  companyId: z.string().optional(),
+const uploadMultipleDocumentsSchema = zfd.formData({
+  files: zfd.repeatableOfType(zfd.file()),
+  companyId: zfd.text().optional(),
 });
 
-const uploadMultipleDocumentsSchema = z.object({
-  files: z.array(z.instanceof(File)),
-  companyId: z.string().optional(),
+const uploadImageSchema = zfd.formData({
+  file: zfd.file(),
+  companyId: zfd.text().optional(),
 });
 
-const uploadMultipleImagesSchema = z.object({
-  files: z.array(z.instanceof(File)),
-  companyId: z.string().optional(),
+const deleteFileSchema = zfd.formData({
+  fileId: zfd.text(),
+  bucketType: zfd.text(),
 });
 
-const deleteFileSchema = z.object({
-  fileId: z.string(),
-  bucketType: z.enum(["document", "image"]),
-});
-
+// ✅ Upload Single Document
 export const uploadDocument = authAction
-  .inputSchema(uploadDocumentSchema)
+  .schema(uploadDocumentSchema)
   .action(async ({ parsedInput, ctx }) => {
     try {
       const { file, companyId } = parsedInput;
 
+      // Validate PDF file type
       const allowedTypes = [
         "application/pdf",
         "application/x-pdf",
@@ -53,15 +49,21 @@ export const uploadDocument = authAction
 
       if (!isPdf) {
         return {
+          success: false,
           error: `Invalid file type. Only PDF files are allowed. (Received: ${file.type})`,
         };
       }
 
+      // Validate file size (10MB max)
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        return { error: "File size must be less than 10MB" };
+        return {
+          success: false,
+          error: "File size must be less than 10MB",
+        };
       }
 
+      // Set up permissions
       const permissions: string[] = [];
 
       if (companyId) {
@@ -78,7 +80,8 @@ export const uploadDocument = authAction
         );
       }
 
-      const documentStorage = new DocumentStorageService();
+      // Upload to Appwrite Storage
+      const documentStorage = new DocumentStorageAdminService();
       const uploadedFile = await documentStorage.uploadFile({
         file,
         permissions,
@@ -94,14 +97,96 @@ export const uploadDocument = authAction
     } catch (error) {
       console.error("Upload document error:", error);
       return {
+        success: false,
         error:
           error instanceof Error ? error.message : "Failed to upload document",
       };
     }
   });
 
+// ✅ Upload Multiple Documents
+export const uploadMultipleDocuments = authAction
+  .schema(uploadMultipleDocumentsSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    try {
+      const { files, companyId } = parsedInput;
+
+      // Validate all files
+      const allowedTypes = [
+        "application/pdf",
+        "application/x-pdf",
+        "application/acrobat",
+        "applications/vnd.pdf",
+        "text/pdf",
+        "text/x-pdf",
+      ];
+      const maxSize = 10 * 1024 * 1024;
+
+      for (const file of files) {
+        const isPdf =
+          allowedTypes.includes(file.type) ||
+          file.name.toLowerCase().endsWith(".pdf");
+
+        if (!isPdf) {
+          return {
+            success: false,
+            error: `Invalid file type for ${file.name}. Only PDF files are allowed.`,
+          };
+        }
+        if (file.size > maxSize) {
+          return {
+            success: false,
+            error: `File too large: ${file.name}`,
+          };
+        }
+      }
+
+      // Set up permissions
+      const permissions: string[] = [];
+
+      if (companyId) {
+        permissions.push(
+          Permission.read(Role.team(companyId)),
+          Permission.update(Role.team(companyId, "owner")),
+          Permission.delete(Role.team(companyId, "owner"))
+        );
+      } else {
+        permissions.push(
+          Permission.read(Role.user(ctx.userId)),
+          Permission.update(Role.user(ctx.userId)),
+          Permission.delete(Role.user(ctx.userId))
+        );
+      }
+
+      // Upload all files
+      const documentStorage = new DocumentStorageService();
+      const uploadedFiles = await documentStorage.uploadMultipleFiles(
+        files,
+        permissions
+      );
+
+      return {
+        success: true,
+        files: uploadedFiles.map((file) => ({
+          fileId: file.$id,
+          fileName: file.name,
+          fileSize: file.sizeOriginal,
+          mimeType: file.mimeType,
+        })),
+      };
+    } catch (error) {
+      console.error("Upload multiple documents error:", error);
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Failed to upload documents",
+      };
+    }
+  });
+
+// ✅ Upload Image
 export const uploadImage = authAction
-  .inputSchema(uploadImageSchema)
+  .schema(uploadImageSchema)
   .action(async ({ parsedInput, ctx }) => {
     try {
       const { file, companyId } = parsedInput;
@@ -116,6 +201,7 @@ export const uploadImage = authAction
 
       if (!allowedTypes.includes(file.type)) {
         return {
+          success: false,
           error:
             "Invalid file type. Only PNG, JPG, GIF, and SVG images are allowed.",
         };
@@ -123,7 +209,10 @@ export const uploadImage = authAction
 
       const maxSize = 5 * 1024 * 1024;
       if (file.size > maxSize) {
-        return { error: "Image size must be less than 5MB" };
+        return {
+          success: false,
+          error: "Image size must be less than 5MB",
+        };
       }
 
       const permissions: string[] = [];
@@ -158,152 +247,17 @@ export const uploadImage = authAction
     } catch (error) {
       console.error("Upload image error:", error);
       return {
+        success: false,
         error:
           error instanceof Error ? error.message : "Failed to upload image",
       };
     }
   });
 
-export const uploadMultipleDocuments = authAction
-  .inputSchema(uploadMultipleDocumentsSchema)
-  .action(async ({ parsedInput, ctx }) => {
-    try {
-      const { files, companyId } = parsedInput;
-      // Accept various PDF MIME types (different browsers may send different types)
-      const allowedTypes = [
-        "application/pdf",
-        "application/x-pdf",
-        "application/acrobat",
-        "applications/vnd.pdf",
-        "text/pdf",
-        "text/x-pdf",
-      ];
-
-      const maxSize = 10 * 1024 * 1024;
-
-      for (const file of files) {
-        // Check both MIME type and file extension
-        const isPdf =
-          allowedTypes.includes(file.type) ||
-          file.name.toLowerCase().endsWith(".pdf");
-
-        if (!isPdf) {
-          return {
-            error: `Invalid file type for ${file.name}. Only PDF files are allowed. (Received: ${file.type})`,
-          };
-        }
-        if (file.size > maxSize) {
-          return { error: `File too large: ${file.name}` };
-        }
-      }
-
-      const permissions: string[] = [];
-
-      if (companyId) {
-        permissions.push(
-          Permission.read(Role.team(companyId)),
-          Permission.update(Role.team(companyId, "owner")),
-          Permission.delete(Role.team(companyId, "owner"))
-        );
-      } else {
-        permissions.push(
-          Permission.read(Role.user(ctx.userId)),
-          Permission.update(Role.user(ctx.userId)),
-          Permission.delete(Role.user(ctx.userId))
-        );
-      }
-
-      const documentStorage = new DocumentStorageService();
-      const uploadedFiles = await documentStorage.uploadMultipleFiles(
-        files,
-        permissions
-      );
-
-      return {
-        success: true,
-        files: uploadedFiles.map((file) => ({
-          fileId: file.$id,
-          fileName: file.name,
-          fileSize: file.sizeOriginal,
-          mimeType: file.mimeType,
-        })),
-      };
-    } catch (error) {
-      console.error("Upload multiple documents error:", error);
-      return {
-        error:
-          error instanceof Error ? error.message : "Failed to upload documents",
-      };
-    }
-  });
-
-export const uploadMultipleImages = authAction
-  .inputSchema(uploadMultipleImagesSchema)
-  .action(async ({ parsedInput, ctx }) => {
-    try {
-      const { files, companyId } = parsedInput;
-
-      const allowedTypes = [
-        "image/png",
-        "image/jpeg",
-        "image/jpg",
-        "image/gif",
-        "image/svg+xml",
-      ];
-      const maxSize = 5 * 1024 * 1024;
-
-      for (const file of files) {
-        if (!allowedTypes.includes(file.type)) {
-          return { error: `Invalid file type: ${file.name}` };
-        }
-        if (file.size > maxSize) {
-          return { error: `Image too large: ${file.name}` };
-        }
-      }
-
-      const permissions: string[] = [];
-
-      if (companyId) {
-        permissions.push(
-          Permission.read(Role.team(companyId)),
-          Permission.update(Role.team(companyId, "owner")),
-          Permission.delete(Role.team(companyId, "owner"))
-        );
-      } else {
-        permissions.push(
-          Permission.read(Role.user(ctx.userId)),
-          Permission.update(Role.user(ctx.userId)),
-          Permission.delete(Role.user(ctx.userId))
-        );
-      }
-
-      const imageStorage = new ImageStorageService();
-      const uploadedFiles = await imageStorage.uploadMultipleFiles(
-        files,
-        permissions
-      );
-
-      return {
-        success: true,
-        files: uploadedFiles.map((file) => ({
-          fileId: file.$id,
-          fileName: file.name,
-          fileSize: file.sizeOriginal,
-          mimeType: file.mimeType,
-        })),
-      };
-    } catch (error) {
-      console.error("Upload multiple images error:", error);
-      return {
-        error:
-          error instanceof Error ? error.message : "Failed to upload images",
-      };
-    }
-  });
-
+// ✅ Delete File
 export const deleteFile = authAction
-  .inputSchema(deleteFileSchema)
-  .action(async ({ parsedInput, ctx }) => {
+  .schema(deleteFileSchema)
+  .action(async ({ parsedInput }) => {
     try {
       const { fileId, bucketType } = parsedInput;
 
@@ -319,6 +273,7 @@ export const deleteFile = authAction
     } catch (error) {
       console.error("Delete file error:", error);
       return {
+        success: false,
         error: error instanceof Error ? error.message : "Failed to delete file",
       };
     }
