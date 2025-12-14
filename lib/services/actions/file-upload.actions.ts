@@ -36,15 +36,24 @@ export const uploadDocument = authAction
   .action(async ({ parsedInput, ctx }) => {
     try {
       const { file, companyId } = parsedInput;
+      // Accept various PDF MIME types (different browsers may send different types)
       const allowedTypes = [
         "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/x-pdf",
+        "application/acrobat",
+        "applications/vnd.pdf",
+        "text/pdf",
+        "text/x-pdf",
       ];
 
-      if (!allowedTypes.includes(file.type)) {
+      // Check both MIME type and file extension as fallback
+      const isPdf =
+        allowedTypes.includes(file.type) ||
+        file.name.toLowerCase().endsWith(".pdf");
+
+      if (!isPdf) {
         return {
-          error: "Invalid file type. Only PDF and DOCX files are allowed.",
+          error: `Invalid file type. Only PDF files are allowed. (Received: ${file.type})`,
         };
       }
 
@@ -160,17 +169,28 @@ export const uploadMultipleDocuments = authAction
   .action(async ({ parsedInput, ctx }) => {
     try {
       const { files, companyId } = parsedInput;
+      // Accept various PDF MIME types (different browsers may send different types)
       const allowedTypes = [
         "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/x-pdf",
+        "application/acrobat",
+        "applications/vnd.pdf",
+        "text/pdf",
+        "text/x-pdf",
       ];
 
       const maxSize = 10 * 1024 * 1024;
 
       for (const file of files) {
-        if (!allowedTypes.includes(file.type)) {
-          return { error: `Invalid file type: ${file.name}` };
+        // Check both MIME type and file extension
+        const isPdf =
+          allowedTypes.includes(file.type) ||
+          file.name.toLowerCase().endsWith(".pdf");
+
+        if (!isPdf) {
+          return {
+            error: `Invalid file type for ${file.name}. Only PDF files are allowed. (Received: ${file.type})`,
+          };
         }
         if (file.size > maxSize) {
           return { error: `File too large: ${file.name}` };

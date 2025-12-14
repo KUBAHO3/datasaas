@@ -50,9 +50,15 @@ export const createSubmissionAction = authAction
       });
 
       const stats = await submissionModel.getFormStats(formId);
+      // Parse metadata if it's a string, or use as object
+      const currentMetadata =
+        typeof form.metadata === "string"
+          ? JSON.parse(form.metadata)
+          : form.metadata || {};
+
       await formModel.updateById(formId, {
         metadata: {
-          ...form.metadata,
+          ...currentMetadata,
           responseCount: stats.totalSubmissions,
           lastSubmittedAt: stats.lastSubmissionAt,
         },

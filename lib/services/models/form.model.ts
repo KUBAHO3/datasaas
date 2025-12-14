@@ -127,7 +127,6 @@ export class FormAdminModel extends AdminDBModel<Form> {
 
   async createFormWithDefaults(
     companyId: string,
-    teamId: string,
     userId: string,
     name: string,
     description?: string
@@ -171,13 +170,14 @@ export class FormAdminModel extends AdminDBModel<Form> {
       responseCount: 0,
     };
 
+    // Note: companyId is same as teamId for multi-tenancy
     const permissions = [
-      Permission.read(Role.team(teamId)),
+      Permission.read(Role.team(companyId)),
       Permission.update(Role.user(userId)),
       Permission.delete(Role.user(userId)),
-      Permission.update(Role.team(teamId, "owner")),
-      Permission.delete(Role.team(teamId, "owner")),
-      Permission.update(Role.team(teamId, "admin")),
+      Permission.update(Role.team(companyId, "owner")),
+      Permission.delete(Role.team(companyId, "owner")),
+      Permission.update(Role.team(companyId, "admin")),
     ];
 
     return this.create(

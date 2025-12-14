@@ -24,10 +24,6 @@ export function FileUploader({
     caption,
     accept = {
         "application/pdf": [".pdf"],
-        "application/msword": [".doc"],
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
-            ".docx",
-        ],
     },
     maxSize = 10,
     disabled = false,
@@ -150,7 +146,7 @@ export function FileUploader({
                             drop
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                            {caption || `PDF, DOC, DOCX (max ${maxSize}MB)`}
+                            {caption || `PDF only (max ${maxSize}MB)`}
                         </p>
                     </div>
                 </div>

@@ -260,7 +260,6 @@ export interface FormMetadata {
 
 export type Form = Models.Document & {
   companyId: string;
-  teamId: string;
   name: string;
   description?: string;
   status: "draft" | "published" | "archived";

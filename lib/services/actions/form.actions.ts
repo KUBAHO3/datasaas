@@ -35,7 +35,6 @@ export const createFormAction = authAction
       const formModel = new FormAdminModel();
       const form = await formModel.createFormWithDefaults(
         company.$id,
-        company.$id,
         ctx.userId,
         name,
         description

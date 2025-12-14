@@ -30,10 +30,6 @@ export function MultiFileUploader({
     maxSize = 10,
     accept = {
         "application/pdf": [".pdf"],
-        "application/msword": [".doc"],
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
-            ".docx",
-        ],
     },
     disabled = false,
     className,
@@ -148,7 +144,7 @@ export function MultiFileUploader({
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
                                 {caption ||
-                                    `PDF, DOC, DOCX (max ${maxSize}MB per file, ${maxFiles} files total)`}
+                                    `PDF only (max ${maxSize}MB per file, ${maxFiles} files total)`}
                             </p>
                             {files && files.length > 0 && (
                                 <p className="text-xs text-muted-foreground mt-1">

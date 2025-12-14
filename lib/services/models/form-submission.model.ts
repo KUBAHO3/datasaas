@@ -2,7 +2,7 @@ import { FormSubmission } from "@/lib/types/form-types";
 import { AdminDBModel, SessionDBModel } from "../core/base-db-model";
 import { DATABASE_ID, FORM_SUBMISSIONS_TABLE_ID } from "@/lib/env-config";
 import { SubmissionHelpers } from "@/lib/utils/forms-utils";
-import { ID } from "node-appwrite";
+import { ID, Permission, Role } from "node-appwrite";
 
 export class FormSubmissionSessionModel extends SessionDBModel<FormSubmission> {
   constructor() {
@@ -60,7 +60,28 @@ export class FormSubmissionAdminModel extends AdminDBModel<FormSubmission> {
 
   async create(data: Partial<FormSubmission>): Promise<FormSubmission> {
     const dbData = SubmissionHelpers.toDB(data);
-    const result = await super.create(dbData, ID.unique());
+
+    // Generate permissions for multi-tenant isolation
+    const permissions: string[] = [];
+
+    if (data.companyId) {
+      // Team members can read all submissions from their company
+      permissions.push(Permission.read(Role.team(data.companyId)));
+
+      // Team owners and admins can update and delete
+      permissions.push(Permission.update(Role.team(data.companyId, "owner")));
+      permissions.push(Permission.update(Role.team(data.companyId, "admin")));
+      permissions.push(Permission.delete(Role.team(data.companyId, "owner")));
+      permissions.push(Permission.delete(Role.team(data.companyId, "admin")));
+    }
+
+    // If submitted by a specific user, they can update their own submission
+    if (data.submittedBy) {
+      permissions.push(Permission.update(Role.user(data.submittedBy)));
+      permissions.push(Permission.read(Role.user(data.submittedBy)));
+    }
+
+    const result = await super.create(dbData, ID.unique(), permissions);
     return SubmissionHelpers.fromDB(result);
   }
 
