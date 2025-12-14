@@ -169,3 +169,11 @@ export const listSubmissionsSchema = z.object({
 });
 
 export type ListSubmissionsInput = z.infer<typeof listSubmissionsSchema>;
+
+export const editSubmissionSchema = z.object({
+  submissionId: z.string(),
+  fieldValues: z.record(z.string(), z.any()), // fieldId -> new value
+  changeDescription: z.string().optional(),
+});
+
+export type EditSubmissionInput = z.infer<typeof editSubmissionSchema>;

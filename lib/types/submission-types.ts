@@ -135,3 +135,16 @@ export interface FieldAnalytics {
     median: number;
   };
 }
+
+// Submission versioning for edit history
+export type SubmissionVersion = Models.Document & {
+  submissionId: string;
+  formId: string;
+  companyId: string;
+  version: number;
+  fieldValues: Record<string, any>; // Snapshot of field values at this version
+  editedBy: string; // User ID who made the edit
+  editedByEmail?: string;
+  editedAt: string;
+  changeDescription?: string;
+};

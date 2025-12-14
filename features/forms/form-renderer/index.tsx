@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useForm } from "react-hook-form";
-import { createSubmissionAction, updateSubmissionAction } from "@/lib/services/actions/form-submission.actions";
+import { createSubmissionAction, createPublicSubmissionAction, updateSubmissionAction } from "@/lib/services/actions/form-submission.actions";
 import { useAction } from "next-safe-action/hooks";
 import { toast } from "sonner";
 import { Loader2, CheckCircle } from "lucide-react";
@@ -18,6 +18,15 @@ interface FormRendererProps {
 }
 
 export function FormRenderer({ form, userContext }: FormRendererProps) {
+    // Determine if the form is public
+    const isPublicForm =
+        form.settings?.isPublic ||
+        form.settings?.allowAnonymous ||
+        form.accessControl?.isPublic ||
+        form.accessControl?.visibility === "public";
+
+    // Use the appropriate action based on whether it's a public form
+    const submissionAction = isPublicForm ? createPublicSubmissionAction : createSubmissionAction;
     const [submissionId, setSubmissionId] = useState<string | null>(null);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
@@ -60,7 +69,7 @@ export function FormRenderer({ form, userContext }: FormRendererProps) {
         return () => clearInterval(interval);
     }, [form.settings.enableAutoSave, isSubmitted, submissionId]);
 
-    const { execute: createSubmission } = useAction(createSubmissionAction, {
+    const { execute: createSubmission } = useAction(submissionAction, {
         onSuccess: ({ data }) => {
             if (data?.success && data.submissionId) {
                 setSubmissionId(data.submissionId);
@@ -71,7 +80,7 @@ export function FormRenderer({ form, userContext }: FormRendererProps) {
     const { execute: updateSubmission } = useAction(updateSubmissionAction);
 
     const { execute: submitForm, isExecuting: isSubmitting } = useAction(
-        createSubmissionAction,
+        submissionAction,
         {
             onSuccess: ({ data }) => {
                 if (data?.success) {

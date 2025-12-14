@@ -5,6 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { CompanyAdminModel } from '@/lib/services/models/company.model';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from '@/components/ui/breadcrumb';
 import { OrgSidebar } from '@/features/dashboard/org-sidebar';
+import { PendingApprovalDashboard } from '@/features/dashboard/pending-approval-dashboard';
 
 interface OrgLayoutProps {
     children: React.ReactNode;
@@ -26,6 +27,8 @@ export default async function OrgLayout({ children, params }: OrgLayoutProps) {
     if (!company) {
         notFound();
     }
+
+    const isOwner = company.createdBy === userContext.userId;
 
     return (
         <SidebarProvider>
@@ -50,7 +53,8 @@ export default async function OrgLayout({ children, params }: OrgLayoutProps) {
                         </BreadcrumbList>
                     </Breadcrumb>
                 </header>
-                {children}
+
+                {company.status !== "active" ? <PendingApprovalDashboard company={company} isOwner={isOwner} /> : children}
             </SidebarInset>
         </SidebarProvider>
     );

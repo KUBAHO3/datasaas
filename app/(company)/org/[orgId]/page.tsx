@@ -63,9 +63,9 @@ async function DashboardContent({ orgId }: { orgId: string }) {
     const { company, stats, isMember, userRole } = dashboardData;
     const isOwner = company.createdBy === userContext.userId;
 
-    if (company.status !== "active") {
-        return <PendingApprovalDashboard company={company} isOwner={isOwner} />;
-    }
+    // if (company.status !== "active") {
+    //     return <PendingApprovalDashboard company={company} isOwner={isOwner} />;
+    // }
 
     if (!isMember && !userContext.isSuperAdmin) {
         return (

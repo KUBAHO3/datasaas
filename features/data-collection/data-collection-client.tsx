@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Download, Filter as FilterIcon, RefreshCw } from "lucide-react";
 import { SubmissionViewDialog } from "./submission-view-dialog";
+import { SubmissionEditDialog } from "./submission-edit-dialog";
 import { useAction } from "next-safe-action/hooks";
 import {
     querySubmissionsAction,
@@ -44,6 +45,7 @@ export function DataCollectionClient({
     const [showFilters, setShowFilters] = useState(false);
     const [showExportDialog, setShowExportDialog] = useState(false);
     const [viewDialogRow, setViewDialogRow] = useState<SubmissionRow | null>(null);
+    const [editDialogRow, setEditDialogRow] = useState<SubmissionRow | null>(null);
     const [currentFilters, setCurrentFilters] = useState<FilterGroup[]>([]);
 
     const { execute: querySubmissions, isExecuting: isQuerying } = useAction(
@@ -160,11 +162,7 @@ export function DataCollectionClient({
                 form={selectedForm}
                 rows={rows}
                 onView={(row) => setViewDialogRow(row)}
-                onEdit={(row) => {
-                    // TODO: Implement edit functionality
-                    console.log("Edit", row);
-                    toast.info("Edit functionality coming soon");
-                }}
+                onEdit={(row) => setEditDialogRow(row)}
                 onDelete={(id) => deleteSubmission({ submissionId: id })}
                 onBulkDelete={(ids) => bulkDelete({ submissionIds: ids })}
                 onExport={() => setShowExportDialog(true)}
@@ -182,6 +180,15 @@ export function DataCollectionClient({
                     open={!!viewDialogRow}
                     onOpenChange={(open) => !open && setViewDialogRow(null)}
                     row={viewDialogRow}
+                    form={selectedForm}
+                />
+            )}
+
+            {editDialogRow && (
+                <SubmissionEditDialog
+                    open={!!editDialogRow}
+                    onOpenChange={(open) => !open && setEditDialogRow(null)}
+                    row={editDialogRow}
                     form={selectedForm}
                 />
             )}

@@ -1,6 +1,6 @@
 "use server";
 
-import { authAction } from "@/lib/safe-action";
+import { authAction, action } from "@/lib/safe-action";
 import {
   createSubmissionSchema,
   getSubmissionSchema,
@@ -74,6 +74,98 @@ export const createSubmissionAction = authAction
       };
     } catch (error) {
       console.error("Create submission error:", error);
+      return {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to create submission",
+      };
+    }
+  });
+
+// Public submission action - no authentication required for public forms
+export const createPublicSubmissionAction = action
+  .inputSchema(createSubmissionSchema)
+  .action(async ({ parsedInput }) => {
+    try {
+      const { formId, data, status, submittedByEmail, isAnonymous } =
+        parsedInput;
+
+      const formModel = new FormAdminModel();
+      const form = await formModel.findById(formId);
+
+      if (!form) {
+        return { error: "Form not found" };
+      }
+
+      if (form.status !== "published") {
+        return { error: "Cannot submit to unpublished forms" };
+      }
+
+      // Check if form allows public/anonymous submissions
+      const settings =
+        typeof form.settings === "string"
+          ? JSON.parse(form.settings)
+          : form.settings || {};
+      const accessControl =
+        typeof form.accessControl === "string"
+          ? JSON.parse(form.accessControl)
+          : form.accessControl || {};
+
+      const isPublicForm =
+        settings.isPublic ||
+        settings.allowAnonymous ||
+        accessControl.isPublic ||
+        accessControl.visibility === "public";
+
+      if (!isPublicForm) {
+        return {
+          error:
+            "This form requires authentication. Please sign in to submit.",
+        };
+      }
+
+      const submissionModel = new FormSubmissionAdminModel();
+      const submission = await submissionModel.create({
+        formId,
+        formVersion: form.version,
+        companyId: form.companyId,
+        data,
+        status,
+        submittedBy: undefined, // No user ID for public submissions
+        submittedByEmail,
+        isAnonymous: true, // Always anonymous for public forms
+        startedAt: new Date().toISOString(),
+        lastSavedAt: new Date().toISOString(),
+        submittedAt:
+          status === "completed" ? new Date().toISOString() : undefined,
+      });
+
+      const stats = await submissionModel.getFormStats(formId);
+      // Parse metadata if it's a string, or use as object
+      const currentMetadata =
+        typeof form.metadata === "string"
+          ? JSON.parse(form.metadata)
+          : form.metadata || {};
+
+      await formModel.updateById(formId, {
+        metadata: {
+          ...currentMetadata,
+          responseCount: stats.totalSubmissions,
+          lastSubmittedAt: stats.lastSubmissionAt,
+        },
+      });
+
+      revalidatePath(`/org/${form.companyId}/data-collection`);
+      revalidatePath(`/org/${form.companyId}/forms/${formId}`);
+
+      return {
+        success: true,
+        submissionId: submission.$id,
+        submission,
+      };
+    } catch (error) {
+      console.error("Create public submission error:", error);
       return {
         error:
           error instanceof Error

@@ -11,9 +11,13 @@ import {
 } from "@/lib/schemas/form-schemas";
 import { CompanyAdminModel } from "../models/company.model";
 import { FormAdminModel, FormSessionModel } from "../models/form.model";
+import { SubmissionAdvancedModel } from "../models/submission-advanced.model";
+import { SubmissionValueAdminModel } from "../models/submission-value.model";
 import { revalidatePath } from "next/cache";
 import { generateFormPermissions } from "@/lib/utils/forms-utils";
-import { Permission, Role } from "node-appwrite";
+import { Permission, Role, Query } from "node-appwrite";
+import { DATABASE_ID, FORM_SUBMISSIONS_TABLE_ID } from "@/lib/env-config";
+import { createAdminClient } from "../core/appwrite";
 
 export const createFormAction = authAction
   .inputSchema(createFormSchema)
@@ -241,20 +245,33 @@ export const deleteFormAction = authAction
         return { error: "Unauthorized to delete this form" };
       }
 
-      if (form.status !== "draft") {
-        return {
-          error:
-            "Can only delete draft forms. Please archive published forms instead.",
-        };
+      // Cascade delete: Delete all submissions and their values
+      const client = await createAdminClient();
+      const submissionsResult = await client.databases.listDocuments(
+        DATABASE_ID,
+        FORM_SUBMISSIONS_TABLE_ID,
+        [Query.equal("formId", formId), Query.limit(5000)]
+      );
+
+      const submissionModel = new SubmissionAdvancedModel();
+      const valueModel = new SubmissionValueAdminModel();
+
+      // Delete all submission values and submissions
+      for (const submission of submissionsResult.documents) {
+        // Delete all values for this submission
+        await valueModel.deleteBySubmissionId(submission.$id);
+        // Delete the submission itself
+        await submissionModel.deleteById(submission.$id);
       }
 
+      // Finally delete the form
       await formModel.deleteById(formId);
 
       revalidatePath(`/org/${company.$id}/forms`);
 
       return {
         success: true,
-        message: "Form deleted successfully!",
+        message: "Form and all associated data deleted successfully!",
       };
     } catch (error) {
       console.error("Delete form error:", error);

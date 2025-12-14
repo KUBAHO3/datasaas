@@ -7,6 +7,8 @@ import {
   sanitizeColumnName,
 } from "@/lib/utils/submission-utils";
 import * as XLSX from "xlsx";
+import PDFDocument from "pdfkit";
+import { Readable } from "stream";
 
 interface ExportParams {
   format: "excel" | "csv" | "json" | "pdf";
@@ -218,7 +220,7 @@ export class ExportService {
   }
 
   /**
-   * Export to PDF (basic HTML template)
+   * Export to PDF using pdfkit
    */
   private async exportToPDF(
     form: Form,
@@ -226,93 +228,198 @@ export class ExportService {
     fields: any[],
     includeMetadata?: boolean
   ): Promise<ExportResult> {
-    const html = this.generatePDFHTML(form, rows, fields, includeMetadata);
-    const base64 = Buffer.from(html, "utf-8").toString("base64");
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({
+          size: "A4",
+          layout: "landscape",
+          margin: 50,
+        });
 
-    return {
-      data: base64,
-      filename: `${sanitizeColumnName(form.name)}_submissions_${
-        new Date().toISOString().split("T")[0]
-      }.html`,
-      mimeType: "text/html",
-    };
-  }
+        const chunks: Buffer[] = [];
 
-  /**
-   * Generate HTML for PDF export
-   */
-  private generatePDFHTML(
-    form: Form,
-    rows: SubmissionRow[],
-    fields: any[],
-    includeMetadata?: boolean
-  ): string {
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>${form.name} - Submissions</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { color: #333; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-    th { background-color: #f2f2f2; font-weight: bold; }
-    tr:nth-child(even) { background-color: #f9f9f9; }
-  </style>
-</head>
-<body>
-  <h1>${form.name} - Submissions Report</h1>
-  <p>Generated on: ${new Date().toLocaleString()}</p>
-  <p>Total Submissions: ${rows.length}</p>
-  
-  <table>
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Status</th>
-        <th>Submitted At</th>
-        <th>Submitted By</th>
-        ${fields.map((f) => `<th>${f.label}</th>`).join("")}
-        ${includeMetadata ? "<th>Started At</th><th>Last Saved</th>" : ""}
-      </tr>
-    </thead>
-    <tbody>
-      ${rows
-        .map(
-          (row) => `
-        <tr>
-          <td>${row.submission.$id}</td>
-          <td>${row.submission.status}</td>
-          <td>${row.submission.submittedAt || "—"}</td>
-          <td>${
-            row.submission.submittedByEmail ||
-            row.submission.submittedBy ||
-            "Anonymous"
-          }</td>
-          ${fields
-            .map((field) => {
-              const value = row.fieldValues[field.id];
-              return `<td>${SubmissionHelpers.formatFieldValue(
-                value,
-                field.type
-              )}</td>`;
-            })
-            .join("")}
-          ${
-            includeMetadata
-              ? `<td>${row.submission.startedAt}</td><td>${row.submission.lastSavedAt}</td>`
-              : ""
+        doc.on("data", (chunk) => chunks.push(chunk));
+        doc.on("end", () => {
+          const pdfBuffer = Buffer.concat(chunks);
+          const base64 = pdfBuffer.toString("base64");
+
+          resolve({
+            data: base64,
+            filename: `${sanitizeColumnName(form.name)}_submissions_${
+              new Date().toISOString().split("T")[0]
+            }.pdf`,
+            mimeType: "application/pdf",
+          });
+        });
+
+        doc.on("error", reject);
+
+        // Header
+        doc.fontSize(20).font("Helvetica-Bold").text(form.name, {
+          align: "center",
+        });
+
+        doc.moveDown(0.5);
+        doc
+          .fontSize(10)
+          .font("Helvetica")
+          .text(`Submissions Report`, { align: "center" });
+        doc.text(`Generated on: ${new Date().toLocaleString()}`, {
+          align: "center",
+        });
+        doc.text(`Total Submissions: ${rows.length}`, { align: "center" });
+
+        doc.moveDown(1);
+
+        // Table configuration
+        const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+        const headers = ["ID", "Status", "Submitted At", "Submitted By"];
+
+        fields.forEach((field) => {
+          headers.push(field.label.substring(0, 20)); // Truncate long labels
+        });
+
+        if (includeMetadata) {
+          headers.push("Started", "Last Saved");
+        }
+
+        const columnWidth = pageWidth / headers.length;
+        const tableTop = doc.y;
+        let currentY = tableTop;
+
+        // Draw table headers
+        doc.fontSize(8).font("Helvetica-Bold");
+        headers.forEach((header, i) => {
+          doc.text(
+            header,
+            doc.page.margins.left + i * columnWidth,
+            currentY,
+            {
+              width: columnWidth - 5,
+              align: "left",
+            }
+          );
+        });
+
+        currentY += 20;
+        doc
+          .moveTo(doc.page.margins.left, currentY)
+          .lineTo(doc.page.width - doc.page.margins.right, currentY)
+          .stroke();
+
+        currentY += 5;
+
+        // Draw table rows
+        doc.font("Helvetica").fontSize(7);
+
+        rows.forEach((row, rowIndex) => {
+          // Check if we need a new page
+          if (currentY > doc.page.height - doc.page.margins.bottom - 50) {
+            doc.addPage({ size: "A4", layout: "landscape", margin: 50 });
+            currentY = doc.page.margins.top;
+
+            // Redraw headers on new page
+            doc.fontSize(8).font("Helvetica-Bold");
+            headers.forEach((header, i) => {
+              doc.text(
+                header,
+                doc.page.margins.left + i * columnWidth,
+                currentY,
+                {
+                  width: columnWidth - 5,
+                  align: "left",
+                }
+              );
+            });
+            currentY += 20;
+            doc
+              .moveTo(doc.page.margins.left, currentY)
+              .lineTo(doc.page.width - doc.page.margins.right, currentY)
+              .stroke();
+            currentY += 5;
+            doc.font("Helvetica").fontSize(7);
           }
-        </tr>
-      `
-        )
-        .join("")}
-    </tbody>
-  </table>
-</body>
-</html>
-    `;
+
+          const rowData: string[] = [
+            row.submission.$id.substring(0, 8) + "...",
+            row.submission.status,
+            row.submission.submittedAt
+              ? new Date(row.submission.submittedAt).toLocaleDateString()
+              : "—",
+            (row.submission.submittedByEmail ||
+              row.submission.submittedBy ||
+              "Anon").substring(0, 15),
+          ];
+
+          fields.forEach((field) => {
+            const value = row.fieldValues[field.id];
+            const formatted = SubmissionHelpers.formatFieldValue(
+              value,
+              field.type
+            );
+            rowData.push(
+              formatted.toString().substring(0, 30) // Truncate long values
+            );
+          });
+
+          if (includeMetadata) {
+            rowData.push(
+              new Date(row.submission.startedAt).toLocaleDateString(),
+              new Date(row.submission.lastSavedAt).toLocaleDateString()
+            );
+          }
+
+          const rowHeight = 15;
+
+          // Alternate row background
+          if (rowIndex % 2 === 0) {
+            doc
+              .rect(
+                doc.page.margins.left,
+                currentY - 2,
+                pageWidth,
+                rowHeight
+              )
+              .fill("#f9f9f9");
+          }
+
+          doc.fillColor("#000000");
+
+          rowData.forEach((cell, i) => {
+            doc.text(
+              cell || "—",
+              doc.page.margins.left + i * columnWidth,
+              currentY,
+              {
+                width: columnWidth - 5,
+                height: rowHeight,
+                align: "left",
+                ellipsis: true,
+              }
+            );
+          });
+
+          currentY += rowHeight;
+        });
+
+        // Footer
+        const pageCount = (doc as any).bufferedPageRange().count;
+        for (let i = 0; i < pageCount; i++) {
+          doc.switchToPage(i);
+          doc
+            .fontSize(8)
+            .text(
+              `Page ${i + 1} of ${pageCount}`,
+              doc.page.margins.left,
+              doc.page.height - doc.page.margins.bottom + 10,
+              { align: "center" }
+            );
+        }
+
+        doc.end();
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
 }

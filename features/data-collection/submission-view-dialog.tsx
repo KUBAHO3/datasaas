@@ -14,6 +14,8 @@ import { Form } from "@/lib/types/form-types";
 import { SubmissionHelpers } from "@/lib/utils/submission-utils";
 import { format } from "date-fns";
 import { CheckCircle, Clock, Calendar, User, Mail } from "lucide-react";
+import { FileListPreview } from "@/components/file-preview";
+import { DOCUMENTS_BUCKET_ID, IMAGES_BUCKET_ID } from "@/lib/env-config";
 
 interface SubmissionViewDialogProps {
   open: boolean;
@@ -110,7 +112,7 @@ export function SubmissionViewDialog({
                     className="border-l-2 border-muted pl-4 py-2"
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 space-y-1">
+                      <div className="flex-1 space-y-2">
                         <div className="font-medium text-sm">{field.label}</div>
                         {field.description && (
                           <div className="text-xs text-muted-foreground">
@@ -118,7 +120,24 @@ export function SubmissionViewDialog({
                           </div>
                         )}
                         <div className="text-sm">
-                          {hasValue ? (
+                          {/* Special handling for file uploads */}
+                          {field.type === "file_upload" ||
+                          field.type === "image_upload" ? (
+                            hasValue && Array.isArray(value) ? (
+                              <FileListPreview
+                                fileIds={value}
+                                bucketId={
+                                  field.type === "image_upload"
+                                    ? IMAGES_BUCKET_ID
+                                    : DOCUMENTS_BUCKET_ID
+                                }
+                              />
+                            ) : (
+                              <span className="text-muted-foreground italic">
+                                No files uploaded
+                              </span>
+                            )
+                          ) : hasValue ? (
                             SubmissionHelpers.formatFieldValue(value, field.type)
                           ) : (
                             <span className="text-muted-foreground italic">

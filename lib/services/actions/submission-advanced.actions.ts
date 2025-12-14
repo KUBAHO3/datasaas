@@ -14,6 +14,7 @@ import {
 } from "@/lib/schemas/submission-filter-schemas";
 import { SubmissionAdvancedModel } from "../models/submission-advanced.model";
 import { SubmissionValueAdminModel } from "../models/submission-value.model";
+import { editSubmissionSchema } from "@/lib/schemas/form-schemas";
 
 export const querySubmissionsAction = authAction
   .schema(submissionFilterQuerySchema)
@@ -242,6 +243,103 @@ export const getGroupedDataAction = authAction
       return {
         error:
           error instanceof Error ? error.message : "Failed to get grouped data",
+      };
+    }
+  });
+
+export const editSubmissionAction = authAction
+  .schema(editSubmissionSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    try {
+      const { submissionId, fieldValues } = parsedInput;
+
+      // Get submission
+      const submissionModel = new FormSubmissionAdminModel();
+      const submission = await submissionModel.findById(submissionId);
+
+      if (!submission) {
+        return { error: "Submission not found" };
+      }
+
+      // Check authorization - must be admin/owner of the company
+      const companyModel = new CompanyAdminModel();
+      const company = await companyModel.findByUserId(ctx.userId);
+
+      if (!company || company.$id !== submission.companyId) {
+        return { error: "Unauthorized to edit this submission" };
+      }
+
+      // Get current values
+      const valueModel = new SubmissionValueAdminModel();
+      const currentValues = await valueModel.getBySubmissionId(submissionId);
+
+      // Update submission values
+      for (const [fieldId, newValue] of Object.entries(fieldValues)) {
+        // Find existing value
+        const existingValue = currentValues.find((v) => v.fieldId === fieldId);
+
+        if (existingValue) {
+          // Update existing value
+          const updateData: any = {};
+
+          if (typeof newValue === "string") {
+            updateData.valueText = newValue;
+          } else if (typeof newValue === "number") {
+            updateData.valueNumber = newValue;
+          } else if (typeof newValue === "boolean") {
+            updateData.valueBoolean = newValue;
+          } else if (Array.isArray(newValue)) {
+            updateData.valueArray = newValue;
+          }
+
+          await valueModel.updateById(existingValue.$id, updateData);
+        } else {
+          // Create new value if it doesn't exist
+          const formModel = new FormAdminModel();
+          const form = await formModel.findById(submission.formId);
+          const field = form?.fields.find((f) => f.id === fieldId);
+
+          if (field) {
+            const newValueData: any = {
+              submissionId,
+              formId: submission.formId,
+              companyId: submission.companyId,
+              fieldId,
+              fieldLabel: field.label,
+              fieldType: field.type,
+            };
+
+            if (typeof newValue === "string") {
+              newValueData.valueText = newValue;
+            } else if (typeof newValue === "number") {
+              newValueData.valueNumber = newValue;
+            } else if (typeof newValue === "boolean") {
+              newValueData.valueBoolean = newValue;
+            } else if (Array.isArray(newValue)) {
+              newValueData.valueArray = newValue;
+            }
+
+            await valueModel.create(newValueData);
+          }
+        }
+      }
+
+      // Update submission metadata
+      await submissionModel.updateById(submissionId, {
+        lastSavedAt: new Date().toISOString(),
+      });
+
+      revalidatePath(`/org/${company.$id}/data-collection`);
+
+      return {
+        success: true,
+        message: "Submission updated successfully",
+      };
+    } catch (error) {
+      console.error("Edit submission error:", error);
+      return {
+        error:
+          error instanceof Error ? error.message : "Failed to edit submission",
       };
     }
   });
