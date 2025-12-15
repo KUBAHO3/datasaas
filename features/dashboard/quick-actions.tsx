@@ -9,7 +9,6 @@ interface QuickActionsProps {
 }
 
 export function QuickActions({ orgId, userRole }: QuickActionsProps) {
-    console.log("uuuuuuu: ", userRole)
     const canCreate = ["owner", "admin", "editor"].includes(userRole);
     const canManageUsers = ["owner", "admin"].includes(userRole);
 

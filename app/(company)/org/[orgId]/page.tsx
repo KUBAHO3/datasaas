@@ -7,7 +7,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { QuickActions } from "@/features/dashboard/quick-actions";
 import { DashboardStatsCards } from "@/features/dashboard/dashboard-stats";
-import { PendingApprovalDashboard } from "@/features/dashboard/pending-approval-dashboard";
 import { getCompanyDashboard } from "@/lib/services/actions/company.actions";
 
 interface DashboardPageProps {
@@ -94,12 +93,10 @@ async function DashboardContent({ orgId }: { orgId: string }) {
                 </p>
             </div>
 
-            {/* Stats Section with Suspense */}
             <Suspense fallback={<StatsLoadingSkeleton />}>
                 <DashboardStatsCards stats={stats} />
             </Suspense>
 
-            {/* Quick Actions Section with Suspense */}
             <div className="space-y-4">
                 <div>
                     <h2 className="text-xl font-semibold">Quick Actions</h2>
@@ -112,7 +109,6 @@ async function DashboardContent({ orgId }: { orgId: string }) {
                 </Suspense>
             </div>
 
-            {/* Additional sections can be added here */}
             <div className="grid gap-4 md:grid-cols-2">
                 <Card>
                     <CardHeader>

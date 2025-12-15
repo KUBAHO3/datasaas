@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Form } from "@/lib/types/form-types";
 import { SubmissionRow } from "@/lib/types/submission-types";
 import {
@@ -14,6 +13,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -26,51 +26,56 @@ import {
     Eye,
     Edit,
     Trash2,
-    Download,
     CheckCircle,
     Clock,
 } from "lucide-react";
 import { SubmissionHelpers } from "@/lib/utils/submission-utils";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 
 interface SubmissionsTableProps {
     form: Form;
     rows: SubmissionRow[];
+    selectedIds: string[];
+    onSelectionChange: (ids: string[]) => void;
     onView: (row: SubmissionRow) => void;
     onEdit: (row: SubmissionRow) => void;
     onDelete: (submissionId: string) => void;
-    onBulkDelete: (submissionIds: string[]) => void;
+    onBulkDelete: () => void;
     onExport: (submissionIds?: string[]) => void;
 }
 
 export function SubmissionsTable({
     form,
     rows,
+    selectedIds,
+    onSelectionChange,
     onView,
     onEdit,
     onDelete,
     onBulkDelete,
     onExport,
 }: SubmissionsTableProps) {
-    const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
-    // Get visible fields (limit to first 5 for table display)
-    const visibleFields = form.fields.slice(0, 5);
+    const visibleFields = form.fields
+        .filter(f =>
+            f.type !== "section_header" &&
+            f.type !== "divider" &&
+            f.type !== "rich_text"
+        )
+        .slice(0, 5);
 
     function handleSelectAll(checked: boolean) {
         if (checked) {
-            setSelectedIds(rows.map((r) => r.submission.$id));
+            onSelectionChange(rows.map((r) => r.submission.$id));
         } else {
-            setSelectedIds([]);
+            onSelectionChange([]);
         }
     }
 
     function handleSelectOne(id: string, checked: boolean) {
         if (checked) {
-            setSelectedIds([...selectedIds, id]);
+            onSelectionChange([...selectedIds, id]);
         } else {
-            setSelectedIds(selectedIds.filter((sid) => sid !== id));
+            onSelectionChange(selectedIds.filter((sid) => sid !== id));
         }
     }
 
@@ -78,53 +83,9 @@ export function SubmissionsTable({
     const someSelected = selectedIds.length > 0 && !allSelected;
 
     return (
-        <div className="space-y-4">
-            {/* Bulk Actions Bar */}
-            {selectedIds.length > 0 && (
-                <div className="flex items-center justify-between bg-muted/50 px-4 py-2 rounded-lg border">
-                    <span className="text-sm font-medium">
-                        {selectedIds.length} selected
-                    </span>
-                    <div className="flex gap-2">
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onExport(selectedIds)}
-                        >
-                            <Download className="h-4 w-4 mr-2" />
-                            Export Selected
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => {
-                                if (
-                                    confirm(
-                                        `Delete ${selectedIds.length} submission(s)? This cannot be undone.`
-                                    )
-                                ) {
-                                    onBulkDelete(selectedIds);
-                                    setSelectedIds([]);
-                                }
-                            }}
-                        >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete Selected
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setSelectedIds([])}
-                        >
-                            Clear
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            {/* Table */}
-            <div className="rounded-md border overflow-hidden">
-                <div className="overflow-x-auto">
+        <Card>
+            <CardContent className="p-0">
+                <div className="relative w-full overflow-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -133,115 +94,130 @@ export function SubmissionsTable({
                                         checked={allSelected}
                                         onCheckedChange={handleSelectAll}
                                         aria-label="Select all"
-                                        className={cn(someSelected && "opacity-50")}
+                                        className={someSelected ? "data-[state=checked]:bg-primary/50" : ""}
                                     />
                                 </TableHead>
-                                <TableHead className="w-24">Status</TableHead>
-                                <TableHead className="min-w-[150px]">Submitted</TableHead>
-                                <TableHead className="min-w-[150px]">Submitted By</TableHead>
+                                <TableHead className="min-w-[120px]">Status</TableHead>
+                                <TableHead className="min-w-[180px]">Submitted</TableHead>
+                                <TableHead className="min-w-[200px]">Submitted By</TableHead>
                                 {visibleFields.map((field) => (
                                     <TableHead key={field.id} className="min-w-[150px]">
                                         {field.label}
                                     </TableHead>
                                 ))}
-                                <TableHead className="w-12"></TableHead>
+                                <TableHead className="w-12">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {rows.length === 0 ? (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={5 + visibleFields.length}
-                                        className="text-center py-8 text-muted-foreground"
+                                        colSpan={visibleFields.length + 4}
+                                        className="h-24 text-center"
                                     >
-                                        No submissions found
+                                        No submissions found.
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                rows.map((row) => (
-                                    <TableRow key={row.submission.$id}>
-                                        <TableCell>
-                                            <Checkbox
-                                                checked={selectedIds.includes(row.submission.$id)}
-                                                onCheckedChange={(checked) =>
-                                                    handleSelectOne(row.submission.$id, checked as boolean)
-                                                }
-                                                aria-label={`Select submission ${row.submission.$id}`}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            {row.submission.status === "completed" ? (
-                                                <Badge variant="default" className="gap-1">
-                                                    <CheckCircle className="h-3 w-3" />
-                                                    Completed
-                                                </Badge>
-                                            ) : (
-                                                <Badge variant="secondary" className="gap-1">
-                                                    <Clock className="h-3 w-3" />
-                                                    Draft
-                                                </Badge>
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            {row.submission.submittedAt
-                                                ? format(new Date(row.submission.submittedAt), "PPp")
-                                                : "—"}
-                                        </TableCell>
-                                        <TableCell>
-                                            {row.submission.submittedByEmail ||
-                                                row.submission.submittedBy ||
-                                                "Anonymous"}
-                                        </TableCell>
-                                        {visibleFields.map((field) => (
-                                            <TableCell key={field.id}>
-                                                {SubmissionHelpers.formatFieldValue(
-                                                    row.fieldValues[field.id],
-                                                    field.type
-                                                )}
+                                rows.map((row) => {
+                                    const isSelected = selectedIds.includes(row.submission.$id);
+                                    const isCompleted = row.submission.status === "completed";
+
+                                    return (
+                                        <TableRow
+                                            key={row.submission.$id}
+                                            className={isSelected ? "bg-muted/50" : ""}
+                                        >
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={isSelected}
+                                                    onCheckedChange={(checked) =>
+                                                        handleSelectOne(row.submission.$id, checked === true)
+                                                    }
+                                                    aria-label={`Select submission ${row.submission.$id}`}
+                                                />
                                             </TableCell>
-                                        ))}
-                                        <TableCell>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => onView(row)}>
-                                                        <Eye className="h-4 w-4 mr-2" />
-                                                        View Details
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => onEdit(row)}>
-                                                        <Edit className="h-4 w-4 mr-2" />
-                                                        Edit
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        onClick={() => {
-                                                            if (
-                                                                confirm(
-                                                                    "Delete this submission? This cannot be undone."
-                                                                )
-                                                            ) {
-                                                                onDelete(row.submission.$id);
-                                                            }
-                                                        }}
-                                                        className="text-destructive"
-                                                    >
-                                                        <Trash2 className="h-4 w-4 mr-2" />
-                                                        Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                            <TableCell>
+                                                <Badge
+                                                    variant={isCompleted ? "default" : "secondary"}
+                                                    className="gap-1"
+                                                >
+                                                    {isCompleted ? (
+                                                        <>
+                                                            <CheckCircle className="h-3 w-3" />
+                                                            Completed
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Clock className="h-3 w-3" />
+                                                            Draft
+                                                        </>
+                                                    )}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-sm">
+                                                {row.submission.submittedAt
+                                                    ? format(new Date(row.submission.submittedAt), "PPp")
+                                                    : "—"}
+                                            </TableCell>
+                                            <TableCell className="text-sm">
+                                                {row.submission.submittedByEmail ||
+                                                    row.submission.submittedBy ||
+                                                    "Anonymous"}
+                                            </TableCell>
+                                            {visibleFields.map((field) => (
+                                                <TableCell key={field.id} className="text-sm">
+                                                    <div className="max-w-[200px] truncate">
+                                                        {SubmissionHelpers.formatFieldValue(
+                                                            row.fieldValues[field.id],
+                                                            field.type
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                            ))}
+                                            <TableCell>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => onView(row)}>
+                                                            <Eye className="h-4 w-4 mr-2" />
+                                                            View Details
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => onEdit(row)}>
+                                                            <Edit className="h-4 w-4 mr-2" />
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                if (
+                                                                    confirm(
+                                                                        "Delete this submission? This cannot be undone."
+                                                                    )
+                                                                ) {
+                                                                    onDelete(row.submission.$id);
+                                                                }
+                                                            }}
+                                                            className="text-destructive"
+                                                        >
+                                                            <Trash2 className="h-4 w-4 mr-2" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
                             )}
                         </TableBody>
                     </Table>
                 </div>
-            </div>
-        </div>
+            </CardContent>
+        </Card>
     );
 }

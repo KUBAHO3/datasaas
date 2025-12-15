@@ -5,163 +5,200 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
+    DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ExportFormat } from "@/lib/types/submission-types";
 import { FormField } from "@/lib/types/form-types";
-import { Download, FileSpreadsheet, FileText, FileJson, FileImage } from "lucide-react";
+import { Download, Loader2, FileText, Table2, FileJson } from "lucide-react";
 import { useAction } from "next-safe-action/hooks";
 import { exportSubmissionsAction } from "@/lib/services/actions/submission-advanced.actions";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface ExportDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     formId: string;
     formFields: FormField[];
+    selectedIds?: string[];
 }
+
+type ExportFormat = "csv" | "excel" | "json" | "pdf";
 
 export function ExportDialog({
     open,
     onOpenChange,
     formId,
     formFields,
+    selectedIds = [],
 }: ExportDialogProps) {
-    const [format, setFormat] = useState<ExportFormat>("excel");
-    const [includeMetadata, setIncludeMetadata] = useState(false);
-    const [selectedFields, setSelectedFields] = useState<string[]>([]);
+    const [format, setFormat] = useState<ExportFormat>("csv");
+    const [selectedFieldIds, setSelectedFieldIds] = useState<string[]>(
+        formFields.map((f) => f.id)
+    );
+    const [includeMetadata, setIncludeMetadata] = useState(true);
 
-    const { execute: exportData, isExecuting } = useAction(exportSubmissionsAction, {
-        onSuccess: ({ data }) => {
-            if (data?.success) {
-                const blob = b64toBlob(data.data, data.mimeType);
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = data.filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
+    const { execute: exportData, isExecuting } = useAction(
+        exportSubmissionsAction,
+        {
+            onSuccess: ({ data }) => {
+                if (data?.success && data.dtadownloadUrl) {
+                    // Create download link
+                    const link = document.createElement("a");
+                    link.href = data.downloadUrl;
+                    link.download = data.filename || `export.${format}`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
 
-                toast.success("Export completed successfully!");
-                onOpenChange(false);
-            }
-        },
-        onError: ({ error }) => {
-            toast.error(error.serverError || "Export failed");
-        },
-    });
+                    toast.success("Export completed successfully");
+                    onOpenChange(false);
+                }
+            },
+            onError: ({ error }) => {
+                toast.error(error.serverError || "Failed to export data");
+            },
+        }
+    );
 
     function handleExport() {
         exportData({
-            format,
             formId,
+            format,
+            fieldIds: selectedFieldIds,
             includeMetadata,
-            selectedFields: selectedFields.length > 0 ? selectedFields : undefined,
+            submissionIds: selectedIds.length > 0 ? selectedIds : undefined,
         });
     }
 
-    function toggleField(fieldId: string) {
-        if (selectedFields.includes(fieldId)) {
-            setSelectedFields(selectedFields.filter((id) => id !== fieldId));
+    function handleToggleField(fieldId: string) {
+        setSelectedFieldIds((prev) =>
+            prev.includes(fieldId)
+                ? prev.filter((id) => id !== fieldId)
+                : [...prev, fieldId]
+        );
+    }
+
+    function handleSelectAllFields() {
+        if (selectedFieldIds.length === formFields.length) {
+            setSelectedFieldIds([]);
         } else {
-            setSelectedFields([...selectedFields, fieldId]);
+            setSelectedFieldIds(formFields.map((f) => f.id));
         }
     }
 
-    function selectAllFields() {
-        setSelectedFields(formFields.map((f) => f.id));
-    }
-
-    function clearAllFields() {
-        setSelectedFields([]);
-    }
-
-    const formatIcons = {
-        excel: FileSpreadsheet,
-        csv: FileText,
-        json: FileJson,
-        pdf: FileImage,
-    };
+    const allFieldsSelected = selectedFieldIds.length === formFields.length;
+    const hasSelectedSubmissions = selectedIds.length > 0;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>Export Submissions</DialogTitle>
                     <DialogDescription>
-                        Choose export format and select fields to include
+                        {hasSelectedSubmissions ? (
+                            <span className="flex items-center gap-2">
+                                Exporting {selectedIds.length} selected submission(s)
+                                <Badge variant="secondary">{selectedIds.length}</Badge>
+                            </span>
+                        ) : (
+                            "Export all submissions with customizable options"
+                        )}
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
-                    {/* Format Selection */}
+                    {/* Export Format */}
                     <div className="space-y-3">
                         <Label>Export Format</Label>
                         <RadioGroup value={format} onValueChange={(v) => setFormat(v as ExportFormat)}>
-                            {(["excel", "csv", "json", "pdf"] as ExportFormat[]).map((fmt) => {
-                                const Icon = formatIcons[fmt];
-                                return (
-                                    <div key={fmt} className="flex items-center space-x-2">
-                                        <RadioGroupItem value={fmt} id={fmt} />
-                                        <Label htmlFor={fmt} className="flex items-center gap-2 cursor-pointer">
-                                            <Icon className="h-4 w-4" />
-                                            {fmt.toUpperCase()}
-                                            {fmt === "excel" && (
-                                                <span className="text-xs text-muted-foreground">
-                                                    (Recommended)
-                                                </span>
-                                            )}
-                                        </Label>
+                            <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-muted/50 cursor-pointer">
+                                <RadioGroupItem value="csv" id="csv" />
+                                <Label htmlFor="csv" className="flex items-center gap-2 cursor-pointer flex-1">
+                                    <Table2 className="h-4 w-4" />
+                                    <div>
+                                        <div className="font-medium">CSV</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            Comma-separated values, compatible with Excel
+                                        </div>
                                     </div>
-                                );
-                            })}
+                                </Label>
+                            </div>
+
+                            <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-muted/50 cursor-pointer">
+                                <RadioGroupItem value="excel" id="excel" />
+                                <Label htmlFor="excel" className="flex items-center gap-2 cursor-pointer flex-1">
+                                    <FileText className="h-4 w-4" />
+                                    <div>
+                                        <div className="font-medium">Excel (.xlsx)</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            Microsoft Excel format with formatting
+                                        </div>
+                                    </div>
+                                </Label>
+                            </div>
+
+                            <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-muted/50 cursor-pointer">
+                                <RadioGroupItem value="json" id="json" />
+                                <Label htmlFor="json" className="flex items-center gap-2 cursor-pointer flex-1">
+                                    <FileJson className="h-4 w-4" />
+                                    <div>
+                                        <div className="font-medium">JSON</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            JavaScript Object Notation, for developers
+                                        </div>
+                                    </div>
+                                </Label>
+                            </div>
+
+                            <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-muted/50 cursor-pointer">
+                                <RadioGroupItem value="pdf" id="pdf" />
+                                <Label htmlFor="pdf" className="flex items-center gap-2 cursor-pointer flex-1">
+                                    <FileText className="h-4 w-4" />
+                                    <div>
+                                        <div className="font-medium">PDF</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            Printable document format
+                                        </div>
+                                    </div>
+                                </Label>
+                            </div>
                         </RadioGroup>
                     </div>
 
                     {/* Field Selection */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <Label>Select Fields</Label>
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={selectAllFields}
-                                    type="button"
-                                >
-                                    Select All
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={clearAllFields}
-                                    type="button"
-                                >
-                                    Clear
-                                </Button>
-                            </div>
+                            <Label>Fields to Include</Label>
+                            <Button
+                                variant="link"
+                                size="sm"
+                                onClick={handleSelectAllFields}
+                                className="h-auto p-0"
+                            >
+                                {allFieldsSelected ? "Deselect All" : "Select All"}
+                            </Button>
                         </div>
-                        <div className="border rounded-lg p-4 max-h-60 overflow-y-auto space-y-2">
+
+                        <div className="max-h-[200px] overflow-y-auto space-y-2 border rounded-lg p-3">
                             {formFields.map((field) => (
-                                <div key={field.id} className="flex items-center space-x-2">
+                                <div
+                                    key={field.id}
+                                    className="flex items-center space-x-2"
+                                >
                                     <Checkbox
                                         id={`field-${field.id}`}
-                                        checked={
-                                            selectedFields.length === 0 || selectedFields.includes(field.id)
-                                        }
-                                        onCheckedChange={() => toggleField(field.id)}
+                                        checked={selectedFieldIds.includes(field.id)}
+                                        onCheckedChange={() => handleToggleField(field.id)}
                                     />
                                     <Label
                                         htmlFor={`field-${field.id}`}
-                                        className="text-sm font-normal cursor-pointer"
+                                        className="text-sm font-normal cursor-pointer flex-1"
                                     >
                                         {field.label}
                                         <span className="text-xs text-muted-foreground ml-2">
@@ -171,58 +208,62 @@ export function ExportDialog({
                                 </div>
                             ))}
                         </div>
-                        {selectedFields.length === 0 && (
-                            <p className="text-xs text-muted-foreground">
-                                All fields will be exported
-                            </p>
-                        )}
                     </div>
 
-                    {/* Options */}
+                    {/* Additional Options */}
                     <div className="space-y-3">
                         <Label>Additional Options</Label>
                         <div className="flex items-center space-x-2">
                             <Checkbox
                                 id="metadata"
                                 checked={includeMetadata}
-                                onCheckedChange={(checked) => setIncludeMetadata(checked as boolean)}
+                                onCheckedChange={(checked) =>
+                                    setIncludeMetadata(checked === true)
+                                }
                             />
-                            <Label htmlFor="metadata" className="text-sm font-normal cursor-pointer">
-                                Include metadata (IP address, user agent, timestamps)
+                            <Label
+                                htmlFor="metadata"
+                                className="text-sm font-normal cursor-pointer"
+                            >
+                                Include submission metadata (ID, timestamp, submitted by, status)
                             </Label>
+                        </div>
+                    </div>
+
+                    {/* Summary */}
+                    <div className="rounded-lg bg-muted p-3 text-sm">
+                        <div className="font-medium mb-2">Export Summary:</div>
+                        <div className="space-y-1 text-muted-foreground">
+                            <div>Format: <span className="font-medium text-foreground">{format.toUpperCase()}</span></div>
+                            <div>Fields: <span className="font-medium text-foreground">{selectedFieldIds.length} / {formFields.length}</span></div>
+                            <div>Submissions: <span className="font-medium text-foreground">
+                                {hasSelectedSubmissions ? `${selectedIds.length} selected` : "All"}
+                            </span></div>
+                            <div>Metadata: <span className="font-medium text-foreground">{includeMetadata ? "Yes" : "No"}</span></div>
                         </div>
                     </div>
                 </div>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => onOpenChange(false)}
+                        disabled={isExecuting}
+                    >
                         Cancel
                     </Button>
-                    <Button onClick={handleExport} disabled={isExecuting}>
-                        <Download className="h-4 w-4 mr-2" />
-                        {isExecuting ? "Exporting..." : "Export"}
+                    <Button
+                        type="button"
+                        onClick={handleExport}
+                        disabled={isExecuting || selectedFieldIds.length === 0}
+                    >
+                        {isExecuting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Download className="mr-2 h-4 w-4" />
+                        Export
                     </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     );
-}
-
-function b64toBlob(b64Data: string, contentType = "", sliceSize = 512) {
-    const byteCharacters = atob(b64Data);
-    const byteArrays = [];
-
-    for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
-        const slice = byteCharacters.slice(offset, offset + sliceSize);
-        const byteNumbers = new Array(slice.length);
-
-        for (let i = 0; i < slice.length; i++) {
-            byteNumbers[i] = slice.charCodeAt(i);
-        }
-
-        const byteArray = new Uint8Array(byteNumbers);
-        byteArrays.push(byteArray);
-    }
-
-    return new Blob(byteArrays, { type: contentType });
 }
