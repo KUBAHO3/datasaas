@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertTriangle, Loader2, PauseCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAction } from "next-safe-action/hooks";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -28,12 +29,30 @@ import { Label } from "@/components/ui/label";
 
 interface SuspendCompanyDialogProps {
     company: Company;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
 type SuspendFormData = z.infer<typeof suspendCompanySchema>;
 
-export function SuspendCompanyDialog({ company }: SuspendCompanyDialogProps) {
-    const [open, setOpen] = useState(false);
+export function SuspendCompanyDialog({
+    company,
+    open: controlledOpen,
+    onOpenChange: controlledOnOpenChange
+}: SuspendCompanyDialogProps) {
+    const [internalOpen, setInternalOpen] = useState(false);
+
+    // Use controlled state if provided, otherwise use internal state
+    const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+    const setOpen = (value: boolean) => {
+        if (controlledOnOpenChange) {
+            controlledOnOpenChange(value);
+        } else {
+            setInternalOpen(value);
+        }
+    };
+
+    const router = useRouter();
 
     const form = useForm<SuspendFormData>({
         resolver: zodResolver(suspendCompanySchema),
@@ -49,6 +68,7 @@ export function SuspendCompanyDialog({ company }: SuspendCompanyDialogProps) {
                 toast.success(data.message || "Company suspended successfully");
                 setOpen(false);
                 form.reset();
+                router.refresh();
             } else if (data?.error) {
                 toast.error(data.error);
             }

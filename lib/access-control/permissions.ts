@@ -7,6 +7,7 @@ import { SessionAccountService } from "../services/core/base-account";
 import { UserDataAdminModel } from "../services/models/users.model";
 import { UserData } from "../types/user-types";
 import { redirect } from "next/navigation";
+import { checkCompanyAccess } from "./company-access";
 
 export interface UserContext {
   userId: string;
@@ -81,19 +82,46 @@ export async function requireSuperAdmin(): Promise<UserContext> {
 
 export async function requireCompany(): Promise<UserContext> {
   const userContext = await requireAuth();
+
   if (!userContext.companyId) {
     redirect("/onboarding");
   }
+
+  // Check if company is suspended (super admins bypass this check)
+  if (!userContext.isSuperAdmin) {
+    const accessResult = await checkCompanyAccess(
+      userContext.userId,
+      userContext.isSuperAdmin
+    );
+
+    if (!accessResult.hasAccess && accessResult.reason === "suspended") {
+      redirect("/suspended");
+    }
+  }
+
   return userContext;
 }
 
 export async function requireCompanyAccess(orgId: string) {
   const userContext = await requireAuth();
+
   if (userContext.isSuperAdmin) return userContext;
+
   if (!userContext.companyId) redirect("/onboarding");
+
   if (userContext.companyId !== orgId) {
     redirect(`/org/${userContext.companyId}`);
   }
+
+  const accessResult = await checkCompanyAccess(
+    userContext.userId,
+    userContext.isSuperAdmin
+  );
+
+  if (!accessResult.hasAccess && accessResult.reason === "suspended") {
+    redirect("/suspended");
+  }
+
   return userContext;
 }
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { COMPANY_ROLES } from "@/lib/constants/company-roles";
 
 export const signInFormSchema = z.object({
   email: z
@@ -19,7 +20,12 @@ export const signUpSchema = z.object({
     .min(8, "Password must be at least 8 characters")
     .max(100, "Password must be at most 100 characters"),
   phone: z.string().min(10, "Please enter a valid phone number"),
-  jobTitle: z.string().min(2, "Job title is required"),
+  jobTitle: z.enum(
+    COMPANY_ROLES.map((role) => role.value) as [string, ...string[]],
+    {
+      message: "Please select a valid job title", // Changed from errorMap
+    }
+  ),
 });
 
 export const forgotPasswordSchema = z.object({

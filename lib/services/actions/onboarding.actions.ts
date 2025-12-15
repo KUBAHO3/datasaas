@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { AUTH_COOKIE } from "@/lib/constants";
+import { RBAC_ROLES } from "@/lib/constants/rbac-roles";
 import {
   AdminAccountService,
   SessionAccountService,
@@ -77,7 +78,8 @@ export const signUpAction = action
         name: parsedInput.name,
         email: parsedInput.email,
         phone: parsedInput.phone,
-        role: parsedInput.jobTitle,
+        jobTitle: parsedInput.jobTitle, // Store job title (CEO, Manager, etc.)
+        role: RBAC_ROLES.OWNER, // First user is always the company owner for RBAC
       });
 
       const companyModel = new CompanyAdminModel();

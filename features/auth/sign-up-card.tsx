@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignUpInput, signUpSchema } from "@/lib/schemas/user-schema";
 import { signUpAction } from "@/lib/services/actions/onboarding.actions";
+import { COMPANY_ROLES } from "@/lib/constants/company-roles";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Briefcase, Eye, EyeOff, Lock, MailIcon, Phone, User } from "lucide-react";
+import { Eye, EyeOff, Lock, MailIcon, Phone, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -26,7 +28,7 @@ export function SignUpCard() {
             email: "",
             password: "",
             phone: "",
-            jobTitle: "",
+            jobTitle: undefined,
         }
     });
 
@@ -101,18 +103,24 @@ export function SignUpCard() {
                                     render={({ field, fieldState }) => (
                                         <Field data-invalid={fieldState.invalid}>
                                             <FieldLabel htmlFor="jobTitle">Job Title</FieldLabel>
-                                            <InputGroup>
-                                                <InputGroupInput
-                                                    {...field}
-                                                    type="text"
-                                                    placeholder="CEO, Manager, etc."
+                                            <Select
+                                                onValueChange={field.onChange}
+                                                value={field.value}
+                                            >
+                                                <SelectTrigger
                                                     id="jobTitle"
                                                     aria-invalid={fieldState.invalid}
-                                                />
-                                                <InputGroupAddon>
-                                                    <Briefcase />
-                                                </InputGroupAddon>
-                                            </InputGroup>
+                                                >
+                                                    <SelectValue placeholder="Select your job title" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {COMPANY_ROLES.map((role) => (
+                                                        <SelectItem key={role.value} value={role.value}>
+                                                            {role.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                             {fieldState.invalid && (
                                                 <FieldError errors={[fieldState.error]} />
                                             )}

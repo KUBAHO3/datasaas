@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, lazy, Suspense } from "react";
+import { useState, lazy, Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,14 +23,14 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import {
     approveCompanyAction,
-    rejectCompanyAction,
-    suspendCompanyAction,
     activateCompanyAction,
     bulkApproveCompaniesAction,
     // exportCompaniesToCSV,
 } from "@/lib/services/actions/company.actions";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAction } from "next-safe-action/hooks";
+import { useConfirm } from "@/hooks/use-confirm";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -52,6 +52,11 @@ const RejectCompanyDialog = lazy(() => import("./reject-company-dialog"));
 const EditCompanyDialog = lazy(() => import("./edit-company-dialog"));
 const DeleteCompanyDialog = lazy(() => import("./delete-company-dialog"));
 const ViewTeamMembersDialog = lazy(() => import("./view-team-members-dialog"));
+const SuspendCompanyDialog = lazy(() =>
+    import("./suspend-company-dialog").then((mod) => ({
+        default: mod.SuspendCompanyDialog,
+    }))
+);
 
 interface CompaniesTableWrapperProps {
     initialCompanies: Company[];
@@ -76,7 +81,7 @@ export function CompaniesTableWrapper({
     highlightId,
 }: CompaniesTableWrapperProps) {
     const router = useRouter();
-    const [isPending, startTransition] = useTransition();
+    const { confirm, ConfirmDialog } = useConfirm();
     const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
     const [isExporting, setIsExporting] = useState(false);
 
@@ -92,10 +97,58 @@ export function CompaniesTableWrapper({
         open: boolean;
         company: Company | null;
     }>({ open: false, company: null });
+    const [suspendDialog, setSuspendDialog] = useState<{
+        open: boolean;
+        company: Company | null;
+    }>({ open: false, company: null });
     const [teamDialog, setTeamDialog] = useState<{
         open: boolean;
         companyId: string | null;
     }>({ open: false, companyId: null });
+
+    // Action hooks
+    const approveAction = useAction(approveCompanyAction, {
+        onSuccess: ({ data }) => {
+            if (data?.success) {
+                toast.success(data.message || "Company approved successfully");
+                router.refresh();
+            } else if (data?.error) {
+                toast.error(data.error);
+            }
+        },
+        onError: () => {
+            toast.error("Failed to approve company");
+        },
+    });
+
+    const activateAction = useAction(activateCompanyAction, {
+        onSuccess: ({ data }) => {
+            if (data?.success) {
+                toast.success(data.message || "Company activated successfully");
+                router.refresh();
+            } else if (data?.error) {
+                toast.error(data.error);
+            }
+        },
+        onError: () => {
+            toast.error("Failed to activate company");
+        },
+    });
+
+    const bulkApproveAction = useAction(bulkApproveCompaniesAction, {
+        onSuccess: ({ data }) => {
+            if (data?.success) {
+                toast.success(data.message || "Companies approved successfully");
+                setSelectedCompanies([]);
+                router.refresh();
+            } else if (data?.error) {
+                toast.error(data.error);
+            }
+        },
+        onError: () => {
+            toast.error("Failed to bulk approve companies");
+        },
+    });
 
     function handleSelectAll(checked: boolean) {
         if (checked) {
@@ -113,43 +166,32 @@ export function CompaniesTableWrapper({
         }
     }
 
-    async function handleApprove(companyId: string) {
-        startTransition(async () => {
-            const result = await approveCompanyAction({ companyId });
-
-            if (result?.data?.success) {
-                toast.success(result.data.message);
-                router.refresh();
-            } else if (result?.serverError) {
-                toast.error(result.serverError);
-            }
+    async function handleApprove(companyId: string, companyName: string) {
+        const confirmed = await confirm({
+            title: "Approve Company",
+            description: `Are you sure you want to approve "${companyName}"? This will create a team and activate the company account.`,
+            confirmText: "Approve",
+            cancelText: "Cancel",
+            variant: "default",
         });
+
+        if (confirmed) {
+            approveAction.execute({ companyId });
+        }
     }
 
-    async function handleSuspend(companyId: string) {
-        startTransition(async () => {
-            const result = await suspendCompanyAction({ companyId, reason: '' });
-
-            if (result?.data?.success) {
-                toast.success(result.data.message);
-                router.refresh();
-            } else if (result?.serverError) {
-                toast.error(result.serverError);
-            }
+    async function handleActivate(companyId: string, companyName: string) {
+        const confirmed = await confirm({
+            title: "Activate Company",
+            description: `Are you sure you want to activate "${companyName}"? This will restore access to the company account.`,
+            confirmText: "Activate",
+            cancelText: "Cancel",
+            variant: "default",
         });
-    }
 
-    async function handleActivate(companyId: string) {
-        startTransition(async () => {
-            const result = await activateCompanyAction({ companyId });
-
-            if (result?.data?.success) {
-                toast.success(result.data.message);
-                router.refresh();
-            } else if (result?.serverError) {
-                toast.error(result.serverError);
-            }
-        });
+        if (confirmed) {
+            activateAction.execute({ companyId });
+        }
     }
 
     async function handleBulkApprove() {
@@ -158,19 +200,17 @@ export function CompaniesTableWrapper({
             return;
         }
 
-        startTransition(async () => {
-            const result = await bulkApproveCompaniesAction({
-                companyIds: selectedCompanies,
-            });
-
-            if (result?.data?.success) {
-                toast.success(result.data.message);
-                setSelectedCompanies([]);
-                router.refresh();
-            } else if (result?.serverError) {
-                toast.error(result.serverError);
-            }
+        const confirmed = await confirm({
+            title: "Bulk Approve Companies",
+            description: `Are you sure you want to approve ${selectedCompanies.length} ${selectedCompanies.length === 1 ? "company" : "companies"}? This will create teams and activate all selected company accounts.`,
+            confirmText: `Approve ${selectedCompanies.length}`,
+            cancelText: "Cancel",
+            variant: "default",
         });
+
+        if (confirmed) {
+            bulkApproveAction.execute({ companyIds: selectedCompanies });
+        }
     }
 
     // async function handleExport() {
@@ -207,14 +247,17 @@ export function CompaniesTableWrapper({
 
     const getStatusBadge = (status: Company["status"]) => {
         const styles = {
+            draft:
+                "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
             pending:
                 "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
             active:
                 "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-            suspended: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
+            suspended:
+                "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
             rejected:
                 "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300",
-        };
+        } satisfies Record<Company["status"], string>;
 
         return (
             <Badge variant="outline" className={styles[status]}>
@@ -254,7 +297,7 @@ export function CompaniesTableWrapper({
                                     size="sm"
                                     variant="outline"
                                     onClick={handleBulkApprove}
-                                    disabled={isPending}
+                                    disabled={bulkApproveAction.status === "executing"}
                                 >
                                     <CheckCircle2 className="h-4 w-4 mr-1" />
                                     Bulk Approve
@@ -263,7 +306,7 @@ export function CompaniesTableWrapper({
                                     size="sm"
                                     variant="outline"
                                     onClick={() => setSelectedCompanies([])}
-                                    disabled={isPending}
+                                    disabled={bulkApproveAction.status === "executing"}
                                 >
                                     Clear Selection
                                 </Button>
@@ -370,8 +413,8 @@ export function CompaniesTableWrapper({
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
-                                                            onClick={() => handleApprove(company.$id)}
-                                                            disabled={isPending}
+                                                            onClick={() => handleApprove(company.$id, company.companyName)}
+                                                            disabled={approveAction.status === "executing"}
                                                         >
                                                             <CheckCircle2 className="h-4 w-4 mr-1" />
                                                             Approve
@@ -382,7 +425,6 @@ export function CompaniesTableWrapper({
                                                             onClick={() =>
                                                                 setRejectDialog({ open: true, company })
                                                             }
-                                                            disabled={isPending}
                                                         >
                                                             <XCircle className="h-4 w-4 mr-1" />
                                                             Reject
@@ -394,8 +436,9 @@ export function CompaniesTableWrapper({
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        onClick={() => handleSuspend(company.$id)}
-                                                        disabled={isPending}
+                                                        onClick={() =>
+                                                            setSuspendDialog({ open: true, company })
+                                                        }
                                                     >
                                                         <Ban className="h-4 w-4 mr-1" />
                                                         Suspend
@@ -406,8 +449,8 @@ export function CompaniesTableWrapper({
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        onClick={() => handleActivate(company.$id)}
-                                                        disabled={isPending}
+                                                        onClick={() => handleActivate(company.$id, company.companyName)}
+                                                        disabled={activateAction.status === "executing"}
                                                     >
                                                         <PlayCircle className="h-4 w-4 mr-1" />
                                                         Activate
@@ -581,6 +624,23 @@ export function CompaniesTableWrapper({
                     />
                 </Suspense>
             )}
+
+            {suspendDialog.open && (
+                <Suspense fallback={null}>
+                    <SuspendCompanyDialog
+                        company={suspendDialog.company!}
+                        open={suspendDialog.open}
+                        onOpenChange={(open) =>
+                            setSuspendDialog({
+                                open,
+                                company: open ? suspendDialog.company : null,
+                            })
+                        }
+                    />
+                </Suspense>
+            )}
+
+            <ConfirmDialog />
         </>
     );
 }

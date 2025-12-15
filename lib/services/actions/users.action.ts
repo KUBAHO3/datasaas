@@ -33,7 +33,6 @@ export const getUserTeamRole = cache(
         return "viewer";
       }
 
-      // Return the highest role
       if (userMembership.roles.includes("owner")) return "owner";
       if (userMembership.roles.includes("admin")) return "admin";
       if (userMembership.roles.includes("editor")) return "editor";

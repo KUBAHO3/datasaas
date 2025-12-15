@@ -148,9 +148,9 @@ export class AdminTeamsService {
       teamId,
       roles,
       email,
-      url,
       userId,
       phone,
+      url,
       name
     );
   }

@@ -7,7 +7,8 @@ export type UserData = Models.Document & {
   phone?: string;
   avatar?: string;
   bio?: string;
-  role?: string;
+  jobTitle?: string; // User's actual job title (CEO, Manager, etc.) - for display
+  role?: string; // RBAC role (owner, admin, editor, viewer) - for permissions
   teamId?: string;
   companyId?: string;
 };

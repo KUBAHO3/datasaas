@@ -2,6 +2,7 @@ import { createSafeActionClient } from "next-safe-action";
 import { cookies } from "next/headers";
 import { AUTH_COOKIE } from "./constants";
 import { SessionAccountService } from "./services/core/base-account";
+import { checkCompanyAccess } from "./access-control/company-access";
 
 export const action = createSafeActionClient({
   handleServerError: (error) => {
@@ -34,6 +35,16 @@ export const authAction = createSafeActionClient({
 
   const isSuperAdmin = user.labels?.includes("superadmin") ?? false;
 
+  const accessResult = await checkCompanyAccess(user.$id, isSuperAdmin);
+
+  if (!accessResult.hasAccess) {
+    if (accessResult.reason === "suspended") {
+      throw new Error(
+        `Your company account (${accessResult.companyName}) has been suspended. Please contact support for assistance.`
+      );
+    }
+  }
+
   return next({
     ctx: {
       userId: user.$id,
@@ -41,6 +52,7 @@ export const authAction = createSafeActionClient({
       name: user.name,
       isSuperAdmin,
       labels: user.labels ?? [],
+      companyAccess: accessResult,
     },
   });
 });
@@ -106,6 +118,16 @@ export function createRoleAction(allowedRoles: string[]) {
 
       const isSuperAdmin = user.labels?.includes("superadmin") || false;
 
+      const accessResult = await checkCompanyAccess(user.$id, isSuperAdmin);
+
+      if (!accessResult.hasAccess) {
+        if (accessResult.reason === "suspended") {
+          throw new Error(
+            `Your company account (${accessResult.companyName}) has been suspended. Please contact support for assistance.`
+          );
+        }
+      }
+
       if (isSuperAdmin) {
         return next({
           ctx: {
@@ -114,6 +136,7 @@ export function createRoleAction(allowedRoles: string[]) {
             name: user.name,
             isSuperAdmin: true,
             labels: user.labels || [],
+            companyAccess: accessResult,
           },
         });
       }
@@ -138,6 +161,7 @@ export function createRoleAction(allowedRoles: string[]) {
           role: userData.role,
           companyId: userData.companyId,
           teamId: userData.teamId,
+          companyAccess: accessResult,
         },
       });
     } catch (error) {

@@ -196,11 +196,14 @@ export const approveCompanyAction = superAdminAction
 
       for (const userData of companyUsers) {
         try {
-          const roles = userData.role === "owner" ? ["owner"] : ["member"];
+          // Map RBAC role to Appwrite team roles
+          // userData.role contains RBAC roles: "owner", "admin", "editor", "viewer"
+          // Appwrite team roles: "owner" or "member"
+          const teamRoles = userData.role === "owner" ? ["owner"] : ["member"];
 
           await teamsService.createMembership(
             companyId,
-            roles,
+            teamRoles,
             userData.email,
             undefined,
             userData.userId,
@@ -208,9 +211,10 @@ export const approveCompanyAction = superAdminAction
             userData.name
           );
 
+          // Ensure companyId and role are set correctly
           await userDataModel.updateById(userData.$id, {
             companyId: companyId,
-            role: userData.role || "member",
+            role: userData.role || "viewer", // Default to viewer if no role
           });
         } catch (memberError) {
           console.error(
