@@ -1,8 +1,7 @@
-"use client"
+"use client";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { UserData } from "@/lib/types/user-types";
+import { TeamMember } from "@/lib/types/user-types";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -23,13 +22,21 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 
 interface TeamMembersTableProps {
-    members: UserData[];
+    members: TeamMember[];
+    currentUserId: string;
+    canManageMembers: boolean;
+    onEditRole: (member: TeamMember) => void;
+    onRemoveMember: (member: TeamMember) => void;
 }
 
-export function TeamMembersTable({ members }: TeamMembersTableProps) {
-    const getRoleBadge = (role?: string) => {
-        if (!role) return null;
-
+export function TeamMembersTable({
+    members,
+    currentUserId,
+    canManageMembers,
+    onEditRole,
+    onRemoveMember,
+}: TeamMembersTableProps) {
+    const getRoleBadge = (role: string) => {
         const roleColors = {
             owner: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
             admin: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
@@ -47,71 +54,92 @@ export function TeamMembersTable({ members }: TeamMembersTableProps) {
         );
     };
 
+    const isCurrentUser = (userId: string | null) => userId === currentUserId;
+
+    if (members.length === 0) {
+        return (
+            <div className="text-center py-8 text-muted-foreground">
+                No team members found
+            </div>
+        );
+    }
+
     return (
-        <Card>
-            <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b bg-muted/50">
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                                    Member
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                                    Email
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                                    Role
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
-                                    Joined
-                                </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                            {members.map((member) => (
-                                <tr
-                                    key={member.$id}
-                                    className="hover:bg-muted/50 transition-colors"
-                                >
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                                                {member.avatar ? (
-                                                    <img
-                                                        src={member.avatar}
-                                                        alt={member.name}
-                                                        className="h-10 w-10 rounded-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <UserCircle className="h-6 w-6 text-primary" />
-                                                )}
-                                            </div>
-                                            <div className="flex flex-col">
+        <div className="overflow-x-auto">
+            <table className="w-full">
+                <thead>
+                    <tr className="border-b bg-muted/50">
+                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            Member
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            Email
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            Role
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            Joined
+                        </th>
+                        {canManageMembers && (
+                            <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">
+                                Actions
+                            </th>
+                        )}
+                    </tr>
+                </thead>
+                <tbody className="divide-y">
+                    {members.map((member) => {
+                        const isSelf = isCurrentUser(member.userId);
+
+                        return (
+                            <tr
+                                key={member.membershipId}
+                                className="hover:bg-muted/50 transition-colors"
+                            >
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                                            {member.avatar ? (
+                                                <img
+                                                    src={member.avatar}
+                                                    alt={member.name}
+                                                    className="h-10 w-10 rounded-full object-cover"
+                                                />
+                                            ) : (
+                                                <UserCircle className="h-6 w-6 text-primary" />
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <div className="flex items-center gap-2">
                                                 <span className="font-medium">{member.name}</span>
-                                                {member.bio && (
-                                                    <span className="text-xs text-muted-foreground line-clamp-1">
-                                                        {member.bio}
-                                                    </span>
+                                                {isSelf && (
+                                                    <Badge variant="secondary" className="text-xs">
+                                                        You
+                                                    </Badge>
                                                 )}
                                             </div>
+                                            {member.jobTitle && (
+                                                <span className="text-xs text-muted-foreground">
+                                                    {member.jobTitle}
+                                                </span>
+                                            )}
                                         </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            <Mail className="h-4 w-4 text-muted-foreground" />
-                                            <span className="text-sm">{member.email}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {getRoleBadge(member.role)}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-muted-foreground">
-                                        {format(new Date(member.$createdAt), "MMM d, yyyy")}
-                                    </td>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-2">
+                                        <Mail className="h-4 w-4 text-muted-foreground" />
+                                        <span className="text-sm">{member.email}</span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    {getRoleBadge(member.role)}
+                                </td>
+                                <td className="px-6 py-4 text-sm text-muted-foreground">
+                                    {format(new Date(member.joined), "MMM d, yyyy")}
+                                </td>
+                                {canManageMembers && (
                                     <td className="px-6 py-4">
                                         <div className="flex justify-end">
                                             <DropdownMenu>
@@ -123,16 +151,19 @@ export function TeamMembersTable({ members }: TeamMembersTableProps) {
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                     <DropdownMenuSeparator />
-                                                    <DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => onEditRole(member)}
+                                                        disabled={isSelf}
+                                                    >
                                                         <Edit className="mr-2 h-4 w-4" />
                                                         Edit Role
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                        <Mail className="mr-2 h-4 w-4" />
-                                                        Resend Invitation
-                                                    </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
-                                                    <DropdownMenuItem className="text-destructive">
+                                                    <DropdownMenuItem
+                                                        onClick={() => onRemoveMember(member)}
+                                                        disabled={isSelf}
+                                                        className="text-destructive"
+                                                    >
                                                         <Trash2 className="mr-2 h-4 w-4" />
                                                         Remove Member
                                                     </DropdownMenuItem>
@@ -140,18 +171,18 @@ export function TeamMembersTable({ members }: TeamMembersTableProps) {
                                             </DropdownMenu>
                                         </div>
                                     </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                )}
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
 
-                <div className="flex items-center justify-between border-t px-6 py-4">
-                    <p className="text-sm text-muted-foreground">
-                        Showing {members.length} team member{members.length !== 1 ? 's' : ''}
-                    </p>
-                </div>
-            </CardContent>
-        </Card>
-    )
+            <div className="flex items-center justify-between border-t px-6 py-4">
+                <p className="text-sm text-muted-foreground">
+                    Showing {members.length} team member{members.length !== 1 ? "s" : ""}
+                </p>
+            </div>
+        </div>
+    );
 }

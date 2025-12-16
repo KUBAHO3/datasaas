@@ -1,9 +1,11 @@
-import { notFound } from "next/navigation";
-import { Building2, Calendar, CheckCircle2, Mail, Phone, User, XCircle } from "lucide-react";
+import { Building2, Calendar, CheckCircle2, Mail, Phone, User, XCircle, AlertCircle } from "lucide-react";
+import Link from "next/link";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getCompanyById } from "@/lib/services/actions/company.actions";
 import { ResendNotificationButton } from "@/features/admin/resend-notification-button";
 import EditCompanyDialog from "@/features/admin/edit-company-dialog";
@@ -16,10 +18,40 @@ interface PageProps {
 }
 
 export default async function CompanyDetailsPage({ params }: PageProps) {
-  const company = await getCompanyById((await params).id);
+  const { id } = await params;
+  const company = await getCompanyById(id);
 
   if (!company) {
-    notFound();
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
+        <Card className="w-full max-w-lg">
+          <CardHeader className="text-center">
+            <div className="flex items-center justify-center gap-2 text-destructive mb-2">
+              <AlertCircle className="h-5 w-5" />
+              <CardTitle className="text-2xl">Company Not Found</CardTitle>
+            </div>
+            <CardDescription>
+              The company you're looking for doesn't exist or has been deleted
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Company ID: <code className="bg-muted px-1 py-0.5 rounded text-xs">{id}</code>
+              </AlertDescription>
+            </Alert>
+            <div className="flex justify-center">
+              <Button asChild>
+                <Link href="/admin/companies">
+                  Back to Companies List
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const getStatusColor = (status: string) => {

@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/access-control/permissions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -56,7 +55,36 @@ async function DashboardContent({ orgId }: { orgId: string }) {
     const dashboardData = await getCompanyDashboard(orgId, userContext.userId);
 
     if (!dashboardData) {
-        notFound();
+        return (
+            <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
+                <Card className="w-full max-w-lg">
+                    <CardHeader className="text-center">
+                        <CardTitle className="text-2xl">Unable to Load Dashboard</CardTitle>
+                        <CardDescription>
+                            We couldn't load the dashboard data for this organization
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Alert>
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>
+                                The organization data could not be found. The organization may have been deleted or you may not have access.
+                            </AlertDescription>
+                        </Alert>
+                        {userContext.companyId && userContext.companyId !== orgId && (
+                            <div className="mt-4 text-center">
+                                <a
+                                    href={`/org/${userContext.companyId}`}
+                                    className="text-sm text-primary hover:underline"
+                                >
+                                    Go to your organization →
+                                </a>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        );
     }
 
     const { company, stats, isMember, userRole } = dashboardData;

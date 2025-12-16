@@ -41,6 +41,7 @@ export const groupConfigSchema = z.object({
 export const submissionFilterQuerySchema = z.object({
   formId: z.string().optional(),
   status: z.enum(["draft", "completed"]).optional(),
+  submissionIds: z.array(z.string()).optional(), // Filter by specific submission IDs
   dateRange: z
     .object({
       start: z.string(),

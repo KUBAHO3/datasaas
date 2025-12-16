@@ -14,3 +14,34 @@ export type UserData = Models.Document & {
 };
 
 export type AppwriteUser = Models.User<Models.Preferences>;
+
+// Team member types
+export type TeamMemberRole = "owner" | "admin" | "editor" | "viewer";
+
+export interface TeamMember {
+  membershipId: string;
+  userId: string | null;
+  email: string;
+  name: string;
+  avatar?: string;
+  bio?: string;
+  jobTitle?: string;
+  role: TeamMemberRole;
+  confirmed: boolean;
+  invited: string;
+  joined: string;
+  $createdAt: string;
+  $updatedAt: string;
+}
+
+export interface TeamMembersData {
+  activeMembers: TeamMember[];
+  pendingMembers: TeamMember[];
+  total: number;
+  stats: {
+    owners: number;
+    admins: number;
+    editors: number;
+    viewers: number;
+  };
+}

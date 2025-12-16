@@ -76,7 +76,46 @@ export const changePasswordSchema = z
     path: ["newPassword"],
   });
 
+// Team member management schemas
+export const inviteTeamMemberSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  role: z.enum(["owner", "admin", "editor", "viewer"], {
+    message: "Please select a valid role",
+  }),
+  name: z.string().min(2, "Name must be at least 2 characters").optional(),
+  companyId: z.string().min(1, "Company ID is required"),
+});
+
+export const updateMemberRoleSchema = z.object({
+  membershipId: z.string().min(1, "Membership ID is required"),
+  companyId: z.string().min(1, "Company ID is required"),
+  role: z.enum(["owner", "admin", "editor", "viewer"], {
+    message: "Please select a valid role",
+  }),
+});
+
+export const removeMemberSchema = z.object({
+  membershipId: z.string().min(1, "Membership ID is required"),
+  companyId: z.string().min(1, "Company ID is required"),
+  userId: z.string().min(1, "User ID is required"),
+});
+
+export const resendInvitationSchema = z.object({
+  membershipId: z.string().min(1, "Membership ID is required"),
+  companyId: z.string().min(1, "Company ID is required"),
+  email: z.string().email("Please enter a valid email address"),
+});
+
+export const listTeamMembersSchema = z.object({
+  companyId: z.string().min(1, "Company ID is required"),
+});
+
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type InviteTeamMemberInput = z.infer<typeof inviteTeamMemberSchema>;
+export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
+export type RemoveMemberInput = z.infer<typeof removeMemberSchema>;
+export type ResendInvitationInput = z.infer<typeof resendInvitationSchema>;
+export type ListTeamMembersInput = z.infer<typeof listTeamMembersSchema>;

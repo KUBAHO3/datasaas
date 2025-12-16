@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { requireCompanyAccess } from '@/lib/access-control/permissions';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
@@ -6,6 +6,8 @@ import { CompanyAdminModel } from '@/lib/services/models/company.model';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from '@/components/ui/breadcrumb';
 import { OrgSidebar } from '@/features/dashboard/org-sidebar';
 import { PendingApprovalDashboard } from '@/features/dashboard/pending-approval-dashboard';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertCircle } from 'lucide-react';
 
 interface OrgLayoutProps {
     children: React.ReactNode;
@@ -16,16 +18,52 @@ export default async function OrgLayout({ children, params }: OrgLayoutProps) {
     const { orgId } = await params;
     const userContext = await requireCompanyAccess(orgId);
 
+    // If user doesn't have access to this org, redirect to their org or show access denied
     if (!userContext.companyId || userContext.companyId !== orgId) {
-        notFound();
+        // If user has a different company, redirect them there
+        if (userContext.companyId) {
+            redirect(`/org/${userContext.companyId}`);
+        }
+        // Otherwise redirect to onboarding
+        redirect('/onboarding');
     }
 
     // Get company details for sidebar
     const companyModel = new CompanyAdminModel();
     const company = await companyModel.findById(orgId);
 
+    // If company doesn't exist, show proper error instead of 404
     if (!company) {
-        notFound();
+        return (
+            <div className="min-h-screen flex items-center justify-center p-6 bg-muted/20">
+                <Card className="max-w-md w-full">
+                    <CardHeader>
+                        <div className="flex items-center gap-2 text-destructive mb-2">
+                            <AlertCircle className="h-5 w-5" />
+                            <CardTitle>Organization Not Found</CardTitle>
+                        </div>
+                        <CardDescription>
+                            The organization you're trying to access doesn't exist or has been deleted.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground">
+                            Organization ID: <code className="bg-muted px-1 py-0.5 rounded">{orgId}</code>
+                        </p>
+                        {userContext.companyId && (
+                            <div className="mt-4">
+                                <a
+                                    href={`/org/${userContext.companyId}`}
+                                    className="text-sm text-primary hover:underline"
+                                >
+                                    Go to your organization →
+                                </a>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        );
     }
 
     const isOwner = company.createdBy === userContext.userId;

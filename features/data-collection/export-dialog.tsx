@@ -47,10 +47,10 @@ export function ExportDialog({
         exportSubmissionsAction,
         {
             onSuccess: ({ data }) => {
-                if (data?.success && data.dtadownloadUrl) {
-                    // Create download link
+                if (data?.success && data.data) {
+                    // Create download link from base64 data
                     const link = document.createElement("a");
-                    link.href = data.downloadUrl;
+                    link.href = `data:${data.mimeType};base64,${data.data}`;
                     link.download = data.filename || `export.${format}`;
                     document.body.appendChild(link);
                     link.click();
@@ -70,9 +70,12 @@ export function ExportDialog({
         exportData({
             formId,
             format,
-            fieldIds: selectedFieldIds,
+            selectedFields: selectedFieldIds.length > 0 ? selectedFieldIds : undefined,
             includeMetadata,
-            submissionIds: selectedIds.length > 0 ? selectedIds : undefined,
+            filters: selectedIds.length > 0 ? {
+                formId,
+                submissionIds: selectedIds
+            } : undefined,
         });
     }
 
