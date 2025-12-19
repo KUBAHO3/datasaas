@@ -10,13 +10,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -97,49 +91,58 @@ function EditRoleDialog({
 
                 <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label htmlFor="role">Role</Label>
-                        <Select
+                        <Label>Role</Label>
+                        <RadioGroup
                             value={selectedRole}
                             onValueChange={(value) => handleRoleChange(value as TeamMemberRole)}
                         >
-                            <SelectTrigger id="role">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="viewer">
-                                    <div className="flex flex-col items-start">
-                                        <span className="font-medium">Viewer</span>
-                                        <span className="text-xs text-muted-foreground">
-                                            Can view data only
-                                        </span>
-                                    </div>
-                                </SelectItem>
-                                <SelectItem value="editor">
-                                    <div className="flex flex-col items-start">
-                                        <span className="font-medium">Editor</span>
-                                        <span className="text-xs text-muted-foreground">
-                                            Can create and edit data
-                                        </span>
-                                    </div>
-                                </SelectItem>
-                                <SelectItem value="admin">
-                                    <div className="flex flex-col items-start">
-                                        <span className="font-medium">Admin</span>
-                                        <span className="text-xs text-muted-foreground">
-                                            Can manage users, forms, and data
-                                        </span>
-                                    </div>
-                                </SelectItem>
-                                <SelectItem value="owner">
-                                    <div className="flex flex-col items-start">
-                                        <span className="font-medium">Owner</span>
-                                        <span className="text-xs text-muted-foreground">
-                                            Full control over the organization
-                                        </span>
-                                    </div>
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
+                            <div className="space-y-3">
+                                <div className="flex items-center space-x-2 rounded-lg border p-4 hover:bg-accent cursor-pointer">
+                                    <RadioGroupItem value="viewer" id="viewer" />
+                                    <Label htmlFor="viewer" className="flex-1 cursor-pointer">
+                                        <div className="flex flex-col">
+                                            <span className="font-medium">Viewer</span>
+                                            <span className="text-xs text-muted-foreground">
+                                                Can view data only
+                                            </span>
+                                        </div>
+                                    </Label>
+                                </div>
+                                <div className="flex items-center space-x-2 rounded-lg border p-4 hover:bg-accent cursor-pointer">
+                                    <RadioGroupItem value="editor" id="editor" />
+                                    <Label htmlFor="editor" className="flex-1 cursor-pointer">
+                                        <div className="flex flex-col">
+                                            <span className="font-medium">Editor</span>
+                                            <span className="text-xs text-muted-foreground">
+                                                Can create and edit data
+                                            </span>
+                                        </div>
+                                    </Label>
+                                </div>
+                                <div className="flex items-center space-x-2 rounded-lg border p-4 hover:bg-accent cursor-pointer">
+                                    <RadioGroupItem value="admin" id="admin" />
+                                    <Label htmlFor="admin" className="flex-1 cursor-pointer">
+                                        <div className="flex flex-col">
+                                            <span className="font-medium">Admin</span>
+                                            <span className="text-xs text-muted-foreground">
+                                                Can manage users, forms, and data
+                                            </span>
+                                        </div>
+                                    </Label>
+                                </div>
+                                <div className="flex items-center space-x-2 rounded-lg border p-4 hover:bg-accent cursor-pointer">
+                                    <RadioGroupItem value="owner" id="owner" />
+                                    <Label htmlFor="owner" className="flex-1 cursor-pointer">
+                                        <div className="flex flex-col">
+                                            <span className="font-medium">Owner</span>
+                                            <span className="text-xs text-muted-foreground">
+                                                Full control over the organization
+                                            </span>
+                                        </div>
+                                    </Label>
+                                </div>
+                            </div>
+                        </RadioGroup>
                     </div>
 
                     {showOwnerWarning && (

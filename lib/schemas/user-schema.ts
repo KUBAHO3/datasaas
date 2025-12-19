@@ -110,6 +110,19 @@ export const listTeamMembersSchema = z.object({
   companyId: z.string().min(1, "Company ID is required"),
 });
 
+export const suspendMemberSchema = z.object({
+  membershipId: z.string().min(1, "Membership ID is required"),
+  companyId: z.string().min(1, "Company ID is required"),
+  userId: z.string().min(1, "User ID is required"),
+  reason: z.string().optional(),
+});
+
+export const unsuspendMemberSchema = z.object({
+  membershipId: z.string().min(1, "Membership ID is required"),
+  companyId: z.string().min(1, "Company ID is required"),
+  userId: z.string().min(1, "User ID is required"),
+});
+
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
@@ -119,3 +132,5 @@ export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
 export type RemoveMemberInput = z.infer<typeof removeMemberSchema>;
 export type ResendInvitationInput = z.infer<typeof resendInvitationSchema>;
 export type ListTeamMembersInput = z.infer<typeof listTeamMembersSchema>;
+export type SuspendMemberInput = z.infer<typeof suspendMemberSchema>;
+export type UnsuspendMemberInput = z.infer<typeof unsuspendMemberSchema>;

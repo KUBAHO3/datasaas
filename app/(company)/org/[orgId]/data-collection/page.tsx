@@ -3,6 +3,10 @@ import { requireCompanyAccess } from "@/lib/access-control/permissions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataCollectionContent } from "@/features/data-collection/data-collection-content";
 
+// This page requires authentication, so it must be dynamic
+// PPR will still work for nested Suspense boundaries
+export const dynamic = 'force-dynamic';
+
 interface DataCollectionPageProps {
     params: Promise<{ orgId: string }>;
     searchParams: Promise<{ formId?: string }>;

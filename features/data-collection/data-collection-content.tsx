@@ -3,6 +3,9 @@ import { FormSubmissionAdminModel } from "@/lib/services/models/form-submission.
 import { SubmissionValueAdminModel } from "@/lib/services/models/submission-value.model";
 import { SubmissionHelpers } from "@/lib/utils/submission-utils";
 import { DataCollectionClient } from "./data-collection-client";
+import { DataCollectionStats } from "./data-collection-stats";
+import { Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cache } from "react";
 
 interface DataCollectionContentProps {
@@ -54,11 +57,32 @@ export async function DataCollectionContent({
     const rows = await getSubmissionsWithValues(selectedForm.$id);
 
     return (
-        <DataCollectionClient
-            forms={forms}
-            selectedForm={selectedForm}
-            initialRows={rows}
-            orgId={orgId}
-        />
+        <div className="space-y-6">
+            {/* Stats Section with Suspense for Streaming */}
+            <Suspense fallback={<StatsLoadingSkeleton />}>
+                <DataCollectionStats formId={selectedForm.$id} />
+            </Suspense>
+
+            {/* Main Data Collection Interface */}
+            <DataCollectionClient
+                forms={forms}
+                selectedForm={selectedForm}
+                initialRows={rows}
+                orgId={orgId}
+            />
+        </div>
+    );
+}
+
+function StatsLoadingSkeleton() {
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton
+                    key={i}
+                    className={`h-[120px] ${i >= 4 ? "md:col-span-2" : ""}`}
+                />
+            ))}
+        </div>
     );
 }

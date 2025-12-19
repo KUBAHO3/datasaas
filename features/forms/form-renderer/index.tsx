@@ -63,7 +63,16 @@ export function FormRenderer({ form, userContext }: FormRendererProps) {
         if (!form.settings.enableAutoSave || isSubmitted) return;
 
         const interval = setInterval(() => {
-            saveDraft();
+            // Only save draft if user has entered some data
+            const formData = formMethods.getValues();
+            const hasData = Object.keys(formData).some(key => {
+                const value = formData[key];
+                return value !== undefined && value !== null && value !== '';
+            });
+
+            if (hasData) {
+                saveDraft();
+            }
         }, form.settings.autoSaveInterval * 1000);
 
         return () => clearInterval(interval);
@@ -139,7 +148,18 @@ export function FormRenderer({ form, userContext }: FormRendererProps) {
 
         if (currentStep < totalSteps - 1) {
             setCurrentStep(currentStep + 1);
-            saveDraft();
+
+            // Only save draft if user has entered some data
+            const formData = formMethods.getValues();
+            const hasData = Object.keys(formData).some(key => {
+                const value = formData[key];
+                return value !== undefined && value !== null && value !== '';
+            });
+
+            if (hasData && form.settings.enableAutoSave) {
+                saveDraft();
+            }
+
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }

@@ -17,6 +17,8 @@ import {
     Shield,
     Edit,
     Trash2,
+    Ban,
+    CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -27,6 +29,7 @@ interface TeamMembersTableProps {
     canManageMembers: boolean;
     onEditRole: (member: TeamMember) => void;
     onRemoveMember: (member: TeamMember) => void;
+    onSuspendMember: (member: TeamMember, mode: "suspend" | "unsuspend") => void;
 }
 
 export function TeamMembersTable({
@@ -35,6 +38,7 @@ export function TeamMembersTable({
     canManageMembers,
     onEditRole,
     onRemoveMember,
+    onSuspendMember,
 }: TeamMembersTableProps) {
     const getRoleBadge = (role: string) => {
         const roleColors = {
@@ -118,6 +122,11 @@ export function TeamMembersTable({
                                                         You
                                                     </Badge>
                                                 )}
+                                                {member.suspended && (
+                                                    <Badge variant="destructive" className="text-xs">
+                                                        Suspended
+                                                    </Badge>
+                                                )}
                                             </div>
                                             {member.jobTitle && (
                                                 <span className="text-xs text-muted-foreground">
@@ -158,6 +167,24 @@ export function TeamMembersTable({
                                                         <Edit className="mr-2 h-4 w-4" />
                                                         Edit Role
                                                     </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    {member.suspended ? (
+                                                        <DropdownMenuItem
+                                                            onClick={() => onSuspendMember(member, "unsuspend")}
+                                                            disabled={isSelf}
+                                                        >
+                                                            <CheckCircle className="mr-2 h-4 w-4" />
+                                                            Unsuspend Member
+                                                        </DropdownMenuItem>
+                                                    ) : (
+                                                        <DropdownMenuItem
+                                                            onClick={() => onSuspendMember(member, "suspend")}
+                                                            disabled={isSelf}
+                                                        >
+                                                            <Ban className="mr-2 h-4 w-4" />
+                                                            Suspend Member
+                                                        </DropdownMenuItem>
+                                                    )}
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem
                                                         onClick={() => onRemoveMember(member)}

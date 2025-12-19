@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { FormRenderer } from "@/features/forms/form-renderer";
 
+export const dynamic = 'force-dynamic';
+
 interface PublicFormPageProps {
     params: Promise<{ formId: string }>;
 }

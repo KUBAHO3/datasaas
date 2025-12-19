@@ -68,7 +68,7 @@ export function FormBuilderCanvas({ form, updateForm }: FormBuilderCanvasProps) 
 
     return (
         <div className="flex-1 overflow-auto bg-muted/20">
-            <div className="max-w-3xl mx-auto p-6 space-y-4">
+            <div className="max-w-3xl mx-auto p-3 sm:p-4 md:p-6 space-y-3 md:space-y-4">
                 <DropZone
                     isOver={dragOverIndex === 0}
                     onDragOver={(e) => handleDragOver(e, 0)}
@@ -117,9 +117,9 @@ function FieldCard({
     onConfig: () => void;
 }) {
     return (
-        <Card className="p-4 hover:shadow-md transition-shadow group">
-            <div className="flex items-start gap-3">
-                <div className="cursor-grab active:cursor-grabbing pt-1">
+        <Card className="p-3 md:p-4 hover:shadow-md transition-shadow group">
+            <div className="flex items-start gap-2 md:gap-3">
+                <div className="cursor-grab active:cursor-grabbing pt-1 hidden md:block">
                     <GripVertical className="h-5 w-5 text-muted-foreground" />
                 </div>
 
@@ -139,12 +139,12 @@ function FieldCard({
                     <FieldPreview field={field} />
                 </div>
 
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button size="icon" variant="ghost" onClick={onConfig}>
-                        <Settings className="h-4 w-4" />
+                <div className="flex gap-1 md:gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <Button size="icon" variant="ghost" onClick={onConfig} className="h-8 w-8 md:h-10 md:w-10">
+                        <Settings className="h-3 w-3 md:h-4 md:w-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" onClick={onDelete}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                    <Button size="icon" variant="ghost" onClick={onDelete} className="h-8 w-8 md:h-10 md:w-10">
+                        <Trash2 className="h-3 w-3 md:h-4 md:w-4 text-destructive" />
                     </Button>
                 </div>
             </div>

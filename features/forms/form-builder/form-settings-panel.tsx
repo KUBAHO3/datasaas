@@ -1,11 +1,16 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { FormSettings, FormAccessControl } from "@/lib/types/form-types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { AlertTriangle, Clock, Calendar } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 interface FormSettingsPanelProps {
     settings: FormSettings;
@@ -115,6 +120,104 @@ export function FormSettingsPanel({
                                 placeholder="Leave empty for unlimited"
                             />
                         </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Calendar className="h-5 w-5" />
+                        Form Expiry
+                    </CardTitle>
+                    <CardDescription>Set a deadline for form submissions</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label>Enable Form Expiry</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Automatically close form after a specific date and time
+                            </p>
+                        </div>
+                        <Switch
+                            checked={!!accessControl.expiresAt}
+                            onCheckedChange={(checked) => {
+                                if (checked) {
+                                    // Set default expiry to 30 days from now
+                                    const defaultExpiry = new Date();
+                                    defaultExpiry.setDate(defaultExpiry.getDate() + 30);
+                                    updateAccessControl({
+                                        expiresAt: defaultExpiry.toISOString(),
+                                    });
+                                } else {
+                                    updateAccessControl({ expiresAt: undefined });
+                                }
+                            }}
+                        />
+                    </div>
+
+                    {accessControl.expiresAt && (
+                        <>
+                            <div className="space-y-2">
+                                <Label htmlFor="expiresAt">Expiry Date & Time</Label>
+                                <Input
+                                    id="expiresAt"
+                                    type="datetime-local"
+                                    value={
+                                        accessControl.expiresAt
+                                            ? new Date(accessControl.expiresAt)
+                                                  .toISOString()
+                                                  .slice(0, 16)
+                                            : ""
+                                    }
+                                    onChange={(e) => {
+                                        const date = new Date(e.target.value);
+                                        updateAccessControl({
+                                            expiresAt: date.toISOString(),
+                                        });
+                                    }}
+                                    min={new Date().toISOString().slice(0, 16)}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Form will stop accepting submissions after this date and time
+                                </p>
+                            </div>
+
+                            {(() => {
+                                const expiryDate = new Date(accessControl.expiresAt);
+                                const now = new Date();
+                                const isExpired = expiryDate < now;
+
+                                return (
+                                    <div className="space-y-2">
+                                        {isExpired ? (
+                                            <Alert variant="destructive">
+                                                <AlertTriangle className="h-4 w-4" />
+                                                <AlertDescription>
+                                                    <strong>This form has expired.</strong> It will not
+                                                    accept new submissions. Update the expiry date or
+                                                    disable expiry to reopen.
+                                                </AlertDescription>
+                                            </Alert>
+                                        ) : (
+                                            <Alert>
+                                                <Clock className="h-4 w-4" />
+                                                <AlertDescription>
+                                                    <strong>Form will expire</strong>{" "}
+                                                    {formatDistanceToNow(expiryDate, {
+                                                        addSuffix: true,
+                                                    })}
+                                                    <div className="mt-1 text-xs text-muted-foreground">
+                                                        {expiryDate.toLocaleString()}
+                                                    </div>
+                                                </AlertDescription>
+                                            </Alert>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+                        </>
                     )}
                 </CardContent>
             </Card>

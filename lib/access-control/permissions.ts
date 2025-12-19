@@ -87,6 +87,11 @@ export async function requireCompany(): Promise<UserContext> {
     redirect("/onboarding");
   }
 
+  // Check if user is suspended
+  if (!userContext.isSuperAdmin && userContext.userData?.suspended) {
+    redirect("/suspended");
+  }
+
   // Check if company is suspended (super admins bypass this check)
   if (!userContext.isSuperAdmin) {
     const accessResult = await checkCompanyAccess(
@@ -108,6 +113,11 @@ export async function requireCompanyAccess(orgId: string) {
   if (userContext.isSuperAdmin) return userContext;
 
   if (!userContext.companyId) redirect("/onboarding");
+
+  // Check if user is suspended
+  if (userContext.userData?.suspended) {
+    redirect("/suspended");
+  }
 
   if (userContext.companyId !== orgId) {
     redirect(`/org/${userContext.companyId}`);

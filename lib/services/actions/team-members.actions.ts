@@ -7,6 +7,8 @@ import {
   removeMemberSchema,
   resendInvitationSchema,
   listTeamMembersSchema,
+  suspendMemberSchema,
+  unsuspendMemberSchema,
 } from "@/lib/schemas/user-schema";
 import { AdminTeamsService } from "../core/base-teams";
 import { AdminUsersService, UserDataAdminModel } from "../models/users.model";
@@ -51,6 +53,8 @@ async function enrichMemberships(memberships: any[], companyId: string) {
           confirmed: membership.confirm,
           invited: membership.invited,
           joined: membership.joined,
+          suspended: userData?.suspended || false,
+          suspendedAt: userData?.suspendedAt,
           $createdAt: membership.$createdAt,
           $updatedAt: membership.$updatedAt,
         };
@@ -67,7 +71,7 @@ async function enrichMemberships(memberships: any[], companyId: string) {
 /**
  * List all team members (active and pending)
  */
-export const listTeamMembers = createRoleAction(["owner", "admin", "editor", "viewer"]).schema(
+export const listTeamMembers = createRoleAction(["owner", "admin", "editor", "viewer"]).inputSchema(
   listTeamMembersSchema
 ).action(async ({ parsedInput, ctx }) => {
   try {
@@ -350,6 +354,122 @@ export const resendInvitation = createRoleAction(["owner", "admin"]).schema(
     console.error("Resend invitation error:", error);
     throw new Error(
       error instanceof Error ? error.message : "Failed to resend invitation"
+    );
+  }
+});
+
+/**
+ * Suspend a team member
+ */
+export const suspendMember = createRoleAction(["owner", "admin"]).inputSchema(
+  suspendMemberSchema
+).action(async ({ parsedInput, ctx }) => {
+  try {
+    const { membershipId, companyId, userId, reason } = parsedInput;
+
+    // Verify access
+    if (!ctx.isSuperAdmin && "companyId" in ctx && ctx.companyId !== companyId) {
+      throw new Error("You do not have permission to suspend members in this company");
+    }
+
+    // Prevent self-suspension
+    if (userId === ctx.userId) {
+      throw new Error("You cannot suspend yourself");
+    }
+
+    const teamsService = new AdminTeamsService();
+
+    // Get membership to check if owner
+    const membership = await teamsService.getMembership(companyId, membershipId);
+
+    // Check if suspending the last owner
+    if (membership.roles.includes("owner")) {
+      const allMemberships = await teamsService.listMemberships(companyId);
+      const activeOwnerCount = allMemberships.memberships.filter((m) =>
+        m.roles.includes("owner")
+      ).length;
+
+      if (activeOwnerCount <= 1) {
+        throw new Error(
+          "Cannot suspend the last owner. Please assign another owner first."
+        );
+      }
+    }
+
+    // Update UserData
+    const userDataModel = new UserDataAdminModel();
+    const userData = await userDataModel.findByUserId(userId);
+
+    if (!userData) {
+      throw new Error("User data not found");
+    }
+
+    if (userData.companyId !== companyId) {
+      throw new Error("User does not belong to this company");
+    }
+
+    await userDataModel.updateById(userData.$id, {
+      suspended: true,
+      suspendedAt: new Date().toISOString(),
+      suspendedBy: ctx.userId,
+      suspendedReason: reason,
+    });
+
+    revalidatePath(`/org/${companyId}/users`);
+    revalidatePath(`/org/${companyId}`);
+
+    return {
+      success: true,
+      message: "Member suspended successfully",
+    };
+  } catch (error) {
+    console.error("Suspend member error:", error);
+    throw new Error(
+      error instanceof Error ? error.message : "Failed to suspend member"
+    );
+  }
+});
+
+/**
+ * Unsuspend a team member
+ */
+export const unsuspendMember = createRoleAction(["owner", "admin"]).inputSchema(
+  unsuspendMemberSchema
+).action(async ({ parsedInput, ctx }) => {
+  try {
+    const { companyId, userId } = parsedInput;
+
+    // Verify access
+    if (!ctx.isSuperAdmin && "companyId" in ctx && ctx.companyId !== companyId) {
+      throw new Error("You do not have permission to unsuspend members in this company");
+    }
+
+    // Update UserData
+    const userDataModel = new UserDataAdminModel();
+    const userData = await userDataModel.findByUserId(userId);
+
+    if (!userData) {
+      throw new Error("User data not found");
+    }
+
+    await userDataModel.updateById(userData.$id, {
+      suspended: false,
+      suspendedAt: undefined,
+      suspendedBy: undefined,
+      suspendedReason: undefined,
+    });
+
+    revalidatePath(`/org/${companyId}/users`);
+    revalidatePath(`/org/${companyId}`);
+
+    return {
+      success: true,
+      message: "Member unsuspended successfully",
+    };
+  } catch (error) {
+    console.error("Unsuspend member error:", error);
+    throw new Error(
+      error instanceof Error ? error.message : "Failed to unsuspend member"
     );
   }
 });

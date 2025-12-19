@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, lazy, Suspense } from "react";
+import { useState, useTransition } from "react";
 import { TeamMember, TeamMemberRole } from "@/lib/types/user-types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,10 @@ import { Input } from "@/components/ui/input";
 import { UserPlus, Search, Users, Shield, Edit3, Eye } from "lucide-react";
 import { TeamMembersTable } from "./team-members-table";
 import { PendingInvitationsTable } from "./pending-invitations-table";
-import { Skeleton } from "@/components/ui/skeleton";
-
-// Lazy load dialogs for better performance
-const InviteMemberDialog = lazy(() => import("./invite-member-dialog"));
-const EditRoleDialog = lazy(() => import("./edit-role-dialog"));
-const RemoveMemberDialog = lazy(() => import("./remove-member-dialog"));
+import InviteMemberDialog from "./invite-member-dialog";
+import EditRoleDialog from "./edit-role-dialog";
+import RemoveMemberDialog from "./remove-member-dialog";
+import SuspendMemberDialog from "./suspend-member-dialog";
 
 interface TeamMembersContentProps {
     orgId: string;
@@ -29,14 +27,6 @@ interface TeamMembersContentProps {
     currentUserRole?: string;
 }
 
-function DialogLoadingFallback() {
-    return (
-        <div className="flex items-center justify-center p-8">
-            <Skeleton className="h-64 w-full max-w-md" />
-        </div>
-    );
-}
-
 export function TeamMembersContent({
     orgId,
     activeMembers,
@@ -49,6 +39,8 @@ export function TeamMembersContent({
     const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
     const [editRoleDialogOpen, setEditRoleDialogOpen] = useState(false);
     const [removeMemberDialogOpen, setRemoveMemberDialogOpen] = useState(false);
+    const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
+    const [suspendMode, setSuspendMode] = useState<"suspend" | "unsuspend">("suspend");
     const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
     const [isPending, startTransition] = useTransition();
 
@@ -77,6 +69,12 @@ export function TeamMembersContent({
     const handleRemoveMember = (member: TeamMember) => {
         setSelectedMember(member);
         setRemoveMemberDialogOpen(true);
+    };
+
+    const handleSuspendMember = (member: TeamMember, mode: "suspend" | "unsuspend") => {
+        setSelectedMember(member);
+        setSuspendMode(mode);
+        setSuspendDialogOpen(true);
     };
 
     const handleResendInvitation = (membershipId: string, email: string) => {
@@ -167,6 +165,7 @@ export function TeamMembersContent({
                         canManageMembers={canManageMembers}
                         onEditRole={handleEditRole}
                         onRemoveMember={handleRemoveMember}
+                        onSuspendMember={handleSuspendMember}
                     />
                 </CardContent>
             </Card>
@@ -190,38 +189,42 @@ export function TeamMembersContent({
                 </Card>
             )}
 
-            {/* Lazy-loaded dialogs */}
+            {/* Dialogs */}
             {inviteDialogOpen && (
-                <Suspense fallback={<DialogLoadingFallback />}>
-                    <InviteMemberDialog
-                        orgId={orgId}
-                        open={inviteDialogOpen}
-                        onOpenChange={setInviteDialogOpen}
-                    />
-                </Suspense>
+                <InviteMemberDialog
+                    orgId={orgId}
+                    open={inviteDialogOpen}
+                    onOpenChange={setInviteDialogOpen}
+                />
             )}
 
             {editRoleDialogOpen && selectedMember && (
-                <Suspense fallback={<DialogLoadingFallback />}>
-                    <EditRoleDialog
-                        orgId={orgId}
-                        member={selectedMember}
-                        open={editRoleDialogOpen}
-                        onOpenChange={setEditRoleDialogOpen}
-                    />
-                </Suspense>
+                <EditRoleDialog
+                    orgId={orgId}
+                    member={selectedMember}
+                    open={editRoleDialogOpen}
+                    onOpenChange={setEditRoleDialogOpen}
+                />
             )}
 
             {removeMemberDialogOpen && selectedMember && (
-                <Suspense fallback={<DialogLoadingFallback />}>
-                    <RemoveMemberDialog
-                        orgId={orgId}
-                        member={selectedMember}
-                        open={removeMemberDialogOpen}
-                        onOpenChange={setRemoveMemberDialogOpen}
-                        currentUserId={currentUserId}
-                    />
-                </Suspense>
+                <RemoveMemberDialog
+                    orgId={orgId}
+                    member={selectedMember}
+                    open={removeMemberDialogOpen}
+                    onOpenChange={setRemoveMemberDialogOpen}
+                    currentUserId={currentUserId}
+                />
+            )}
+
+            {suspendDialogOpen && selectedMember && (
+                <SuspendMemberDialog
+                    orgId={orgId}
+                    member={selectedMember}
+                    open={suspendDialogOpen}
+                    onOpenChange={setSuspendDialogOpen}
+                    mode={suspendMode}
+                />
             )}
         </div>
     );

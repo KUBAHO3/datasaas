@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { Form } from "@/lib/types/form-types";
 import { Button } from "@/components/ui/button";
-import { Save, Eye, Settings, Palette, Share2 } from "lucide-react";
+import { Save, Eye, Settings, Palette, Share2, CheckCircle, Archive } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAction } from "next-safe-action/hooks";
-import { updateFormAction } from "@/lib/services/actions/form.actions";
+import { updateFormAction, publishFormAction, archiveFormAction } from "@/lib/services/actions/form.actions";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,7 @@ import { FormBuilderCanvas } from "./form-builder-canvas";
 import { FormSettingsPanel } from "./form-settings-panel";
 import { FormThemePanel } from "./form-theme-panel";
 import { FormSharePanel } from "./form-share-panel";
+import { EditableFormHeader } from "./editable-form-header";
 
 interface FormBuilderProps {
     form: Form;
@@ -39,6 +40,29 @@ export function FormBuilder({ form: initialForm, orgId }: FormBuilderProps) {
         },
     });
 
+    const { execute: publishForm, isExecuting: isPublishing } = useAction(publishFormAction, {
+        onSuccess: ({ data }) => {
+            if (data?.success) {
+                toast.success("Form published successfully!");
+                setHasChanges(false);
+                router.refresh();
+            } else {
+                toast.error(data?.error || "Failed to publish form");
+            }
+        },
+    });
+
+    const { execute: archiveForm, isExecuting: isArchiving } = useAction(archiveFormAction, {
+        onSuccess: ({ data }) => {
+            if (data?.success) {
+                toast.success("Form archived successfully!");
+                router.refresh();
+            } else {
+                toast.error(data?.error || "Failed to archive form");
+            }
+        },
+    });
+
     function handleSave() {
         saveForm({
             formId: form.$id,
@@ -53,9 +77,36 @@ export function FormBuilder({ form: initialForm, orgId }: FormBuilderProps) {
         });
     }
 
+    async function handlePublish() {
+        // Validate form has at least one field
+        if (form.fields.length === 0) {
+            toast.error("Cannot publish form without any fields");
+            return;
+        }
+
+        // If there are unsaved changes, user should save first
+        if (hasChanges) {
+            toast.error("Please save your changes before publishing");
+            return;
+        }
+
+        // Publish the form
+        publishForm({ formId: form.$id });
+    }
+
+    function handleArchive() {
+        if (confirm("Are you sure you want to unpublish this form? It will no longer be accessible to users.")) {
+            archiveForm({ formId: form.$id });
+        }
+    }
+
     function updateForm(updates: Partial<Form>) {
         setForm((prev) => ({ ...prev, ...updates }));
         setHasChanges(true);
+    }
+
+    function handleUpdateIdentity(updates: { name?: string; description?: string }) {
+        updateForm(updates);
     }
 
     console.log("foooorrmmm data: ", form)
@@ -63,54 +114,104 @@ export function FormBuilder({ form: initialForm, orgId }: FormBuilderProps) {
     return (
         <div className="h-screen flex flex-col">
             <div className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-                <div className="flex h-16 items-center px-6 gap-4">
-                    <div className="flex-1">
-                        <h1 className="text-lg font-semibold truncate">{form.name}</h1>
-                        <p className="text-sm text-muted-foreground">
-                            {hasChanges ? "Unsaved changes" : "All changes saved"}
-                        </p>
-                    </div>
+                <div className="flex flex-col sm:flex-row min-h-16 items-start sm:items-center px-4 sm:px-6 py-3 sm:py-0 gap-3 sm:gap-4">
+                    <EditableFormHeader
+                        form={form}
+                        hasChanges={hasChanges}
+                        onUpdate={handleUpdateIdentity}
+                    />
 
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" asChild>
+                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+                        <Button variant="outline" size="sm" asChild className="shrink-0">
                             <Link href={`/org/${orgId}/forms/${form.$id}/preview`}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                Preview
+                                <Eye className="h-4 w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Preview</span>
                             </Link>
                         </Button>
-                        <Button
-                            size="sm"
-                            onClick={handleSave}
-                            disabled={!hasChanges || isSaving}
-                        >
-                            <Save className="mr-2 h-4 w-4" />
-                            {isSaving ? "Saving..." : "Save"}
-                        </Button>
+
+                        {/* Show different buttons based on form status */}
+                        {form.status === "draft" && (
+                            <>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleSave}
+                                    disabled={!hasChanges || isSaving}
+                                    className="shrink-0"
+                                >
+                                    <Save className="h-4 w-4 sm:mr-2" />
+                                    <span className="hidden sm:inline">{isSaving ? "Saving..." : "Save Draft"}</span>
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    onClick={handlePublish}
+                                    disabled={isPublishing || form.fields.length === 0}
+                                    className="shrink-0"
+                                >
+                                    <CheckCircle className="h-4 w-4 sm:mr-2" />
+                                    <span className="hidden sm:inline">{isPublishing ? "Publishing..." : "Publish"}</span>
+                                </Button>
+                            </>
+                        )}
+
+                        {form.status === "published" && (
+                            <>
+                                <Button
+                                    size="sm"
+                                    onClick={handleSave}
+                                    disabled={!hasChanges || isSaving}
+                                    className="shrink-0"
+                                >
+                                    <Save className="h-4 w-4 sm:mr-2" />
+                                    <span className="hidden sm:inline">{isSaving ? "Saving..." : "Save Changes"}</span>
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={handleArchive}
+                                    disabled={isArchiving}
+                                    className="shrink-0"
+                                >
+                                    <Archive className="h-4 w-4 sm:mr-2" />
+                                    <span className="hidden sm:inline">{isArchiving ? "Unpublishing..." : "Unpublish"}</span>
+                                </Button>
+                            </>
+                        )}
+
+                        {form.status === "archived" && (
+                            <Button size="sm" onClick={handlePublish} disabled={isPublishing} className="shrink-0">
+                                <CheckCircle className="h-4 w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">{isPublishing ? "Publishing..." : "Re-publish"}</span>
+                            </Button>
+                        )}
                     </div>
                 </div>
             </div>
 
             <div className="flex-1 flex overflow-hidden">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-                    <div className="border-b px-6">
-                        <TabsList>
-                            <TabsTrigger value="build">Build</TabsTrigger>
-                            <TabsTrigger value="settings">
-                                <Settings className="mr-2 h-4 w-4" />
-                                Settings
+                    <div className="border-b px-4 sm:px-6 overflow-x-auto">
+                        <TabsList className="w-full sm:w-auto justify-start">
+                            <TabsTrigger value="build" className="flex-1 sm:flex-initial">
+                                <span className="sm:hidden">Build</span>
+                                <span className="hidden sm:inline">Build</span>
                             </TabsTrigger>
-                            <TabsTrigger value="theme">
-                                <Palette className="mr-2 h-4 w-4" />
-                                Theme
+                            <TabsTrigger value="settings" className="flex-1 sm:flex-initial">
+                                <Settings className="h-4 w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Settings</span>
                             </TabsTrigger>
-                            <TabsTrigger value="share">
-                                <Share2 className="mr-2 h-4 w-4" />
-                                Share
+                            <TabsTrigger value="theme" className="flex-1 sm:flex-initial">
+                                <Palette className="h-4 w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Theme</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="share" className="flex-1 sm:flex-initial">
+                                <Share2 className="h-4 w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Share</span>
                             </TabsTrigger>
                         </TabsList>
                     </div>
 
-                    <TabsContent value="build" className="flex-1 flex m-0">
+                    <TabsContent value="build" className="flex-1 flex m-0 flex-col md:flex-row overflow-hidden h-0">
                         <FormBuilderSidebar />
                         <FormBuilderCanvas form={form} updateForm={updateForm} />
                     </TabsContent>

@@ -3,6 +3,9 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
+// This page needs dynamic rendering for auth checks
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
   const userContext = await getCurrentUserContext();
 

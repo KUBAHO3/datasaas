@@ -11,6 +11,10 @@ export type UserData = Models.Document & {
   role?: string; // RBAC role (owner, admin, editor, viewer) - for permissions
   teamId?: string;
   companyId?: string;
+  suspended?: boolean; // Whether user is suspended
+  suspendedAt?: string; // Timestamp when user was suspended
+  suspendedBy?: string; // User ID who suspended this user
+  suspendedReason?: string; // Optional reason for suspension
 };
 
 export type AppwriteUser = Models.User<Models.Preferences>;
@@ -30,6 +34,8 @@ export interface TeamMember {
   confirmed: boolean;
   invited: string;
   joined: string;
+  suspended?: boolean; // Whether member is suspended
+  suspendedAt?: string; // Timestamp when member was suspended
   $createdAt: string;
   $updatedAt: string;
 }
