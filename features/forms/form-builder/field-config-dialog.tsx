@@ -16,8 +16,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, GripVertical } from "lucide-react";
+import { Plus, Trash2, GripVertical, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 interface FieldConfigDialogProps {
     field: FormField;
@@ -33,16 +35,62 @@ export function FieldConfigDialog({
     onSave,
 }: FieldConfigDialogProps) {
     const [field, setField] = useState<FormField>(initialField);
+    const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+    function validateField(): boolean {
+        const errors: string[] = [];
+
+        // Check if label is empty
+        if (!field.label || field.label.trim() === "") {
+            errors.push("Field label is required");
+        }
+
+        // Check if fields that require options have at least one option
+        if (supportsOptions) {
+            const options = field.options || [];
+            if (options.length === 0) {
+                errors.push(`${getFieldTypeName(field.type)} fields require at least one option`);
+            } else {
+                // Check if any option has empty label
+                const emptyOptions = options.filter(opt => !opt.label || opt.label.trim() === "");
+                if (emptyOptions.length > 0) {
+                    errors.push("All options must have a label");
+                }
+            }
+        }
+
+        setValidationErrors(errors);
+        return errors.length === 0;
+    }
 
     function handleSave() {
-        onSave(field);
+        if (validateField()) {
+            onSave(field);
+            onOpenChange(false);
+        } else {
+            toast.error("Please fix the validation errors before saving");
+        }
     }
 
     function updateField(updates: Partial<Omit<FormField, "type">>) {
         setField((prev) => ({ ...prev, ...updates }));
+        // Clear validation errors when user makes changes
+        if (validationErrors.length > 0) {
+            setValidationErrors([]);
+        }
     }
 
     const supportsOptions = ["dropdown", "radio", "checkbox", "multi_select"].includes(field.type);
+
+    function getFieldTypeName(type: string): string {
+        const names: Record<string, string> = {
+            dropdown: "Dropdown",
+            radio: "Radio",
+            checkbox: "Checkbox Group",
+            multi_select: "Multi-Select",
+        };
+        return names[type] || type;
+    }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -53,6 +101,20 @@ export function FieldConfigDialog({
                         Customize the field settings and appearance
                     </DialogDescription>
                 </DialogHeader>
+
+                {/* Validation Errors */}
+                {validationErrors.length > 0 && (
+                    <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                            <ul className="list-disc list-inside space-y-1">
+                                {validationErrors.map((error, index) => (
+                                    <li key={index}>{error}</li>
+                                ))}
+                            </ul>
+                        </AlertDescription>
+                    </Alert>
+                )}
 
                 <Tabs defaultValue="general" className="flex-1 overflow-hidden flex flex-col">
                     <TabsList className="grid w-full grid-cols-3">
@@ -221,9 +283,15 @@ function FieldOptionsEditor({
                 ))}
 
                 {options.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground text-sm">
-                        No options yet. Click "Add Option" to get started.
-                    </div>
+                    <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                            <p className="font-medium">Options Required</p>
+                            <p className="text-sm mt-1">
+                                This field type requires at least one option. Click "Add Option" above to get started.
+                            </p>
+                        </AlertDescription>
+                    </Alert>
                 )}
             </div>
         </div>

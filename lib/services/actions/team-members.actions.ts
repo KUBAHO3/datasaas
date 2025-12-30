@@ -9,13 +9,17 @@ import {
   listTeamMembersSchema,
   suspendMemberSchema,
   unsuspendMemberSchema,
+  acceptInvitationSchema,
 } from "@/lib/schemas/user-schema";
 import { AdminTeamsService } from "../core/base-teams";
 import { AdminUsersService, UserDataAdminModel } from "../models/users.model";
+import { AdminAccountService } from "../core/base-account";
 import { APP_URL } from "@/lib/env-config";
 import { revalidatePath } from "next/cache";
-import { Query } from "node-appwrite";
+import { ID, Query } from "node-appwrite";
 import { TeamMemberRole } from "@/lib/types/user-types";
+import { Invitation } from "@/lib/types/invitation-types";
+import { action } from "@/lib/safe-action";
 
 // Helper function to get team member details with user data
 async function enrichMemberships(memberships: any[], companyId: string) {
@@ -69,7 +73,7 @@ async function enrichMemberships(memberships: any[], companyId: string) {
 }
 
 /**
- * List all team members (active and pending)
+ * List all team members (active) and pending invitations
  */
 export const listTeamMembers = createRoleAction(["owner", "admin", "editor", "viewer"]).inputSchema(
   listTeamMembersSchema
@@ -83,28 +87,51 @@ export const listTeamMembers = createRoleAction(["owner", "admin", "editor", "vi
     }
 
     const teamsService = new AdminTeamsService();
-    const memberships = await teamsService.listMemberships(companyId);
+    const { InvitationModel } = await import("../models/invitation.model");
 
-    const enrichedMembers = await enrichMemberships(
+    // Get confirmed team members from Appwrite
+    const memberships = await teamsService.listMemberships(companyId);
+    const activeMembers = await enrichMemberships(
       memberships.memberships,
       companyId
     );
 
-    // Separate active and pending members
-    const activeMembers = enrichedMembers.filter((m) => m.confirmed);
-    const pendingMembers = enrichedMembers.filter((m) => !m.confirmed);
+    // Get pending invitations from Invitations collection
+    const invitationModel = new InvitationModel();
+    const pendingInvitations = await invitationModel.listByCompany(companyId, "pending");
+
+    // Format pending invitations to match TeamMember interface
+    const pendingMembers = pendingInvitations.map((invitation) => ({
+      membershipId: invitation.$id, // Use invitation ID as membershipId for UI compatibility
+      userId: null,
+      email: invitation.email,
+      name: invitation.name || "Pending",
+      avatar: undefined,
+      bio: undefined,
+      jobTitle: undefined,
+      role: invitation.role,
+      confirmed: false,
+      invited: invitation.$createdAt,
+      joined: undefined,
+      suspended: false,
+      suspendedAt: undefined,
+      $createdAt: invitation.$createdAt,
+      $updatedAt: invitation.$updatedAt,
+    }));
+
+    const allMembers = [...activeMembers, ...pendingMembers];
 
     return {
       success: true,
       data: {
         activeMembers,
         pendingMembers,
-        total: enrichedMembers.length,
+        total: allMembers.length,
         stats: {
-          owners: enrichedMembers.filter((m) => m.role === "owner").length,
-          admins: enrichedMembers.filter((m) => m.role === "admin").length,
-          editors: enrichedMembers.filter((m) => m.role === "editor").length,
-          viewers: enrichedMembers.filter((m) => m.role === "viewer").length,
+          owners: allMembers.filter((m) => m.role === "owner").length,
+          admins: allMembers.filter((m) => m.role === "admin").length,
+          editors: allMembers.filter((m) => m.role === "editor").length,
+          viewers: allMembers.filter((m) => m.role === "viewer").length,
         },
       },
     };
@@ -117,7 +144,7 @@ export const listTeamMembers = createRoleAction(["owner", "admin", "editor", "vi
 });
 
 /**
- * Invite a new team member
+ * Invite a new team member (using Resend)
  */
 export const inviteTeamMember = createRoleAction(["owner", "admin"]).schema(
   inviteTeamMemberSchema
@@ -131,28 +158,67 @@ export const inviteTeamMember = createRoleAction(["owner", "admin"]).schema(
     }
 
     const teamsService = new AdminTeamsService();
+    const { InvitationModel } = await import("../models/invitation.model");
+    const { sendTeamInvitationEmail } = await import("../email/resend");
+    const { CompanyAdminModel } = await import("../models/company.model");
 
-    // Check if user is already a member
+    // Check if user is already a team member
     const existingMemberships = await teamsService.listMemberships(companyId);
     const isAlreadyMember = existingMemberships.memberships.some(
-      (m) => m.userEmail === email
+      (m) => m.userEmail === email && m.confirm
     );
 
     if (isAlreadyMember) {
-      throw new Error("This user is already a member or has a pending invitation");
+      throw new Error("This user is already a member of this company");
     }
 
-    // Create invitation URL
-    const inviteUrl = `${APP_URL}/invite/accept`;
-
-    // Create team membership (sends email automatically)
-    const membership = await teamsService.createMembership(
-      companyId,
-      [role], // Appwrite roles
+    // Check if there's already a pending invitation
+    const invitationModel = new InvitationModel();
+    const existingInvitation = await invitationModel.findByEmailAndCompany(
       email,
+      companyId
+    );
+
+    if (existingInvitation) {
+      throw new Error("This user already has a pending invitation");
+    }
+
+    // Get company details
+    const companyModel = new CompanyAdminModel();
+    const company = await companyModel.findById(companyId);
+
+    if (!company) {
+      throw new Error("Company not found");
+    }
+
+    // Generate invitation token
+    const token = InvitationModel.generateToken();
+    const expiresAt = InvitationModel.getExpirationDate(7); // 7 days
+
+    // Create invitation record
+    const invitation = await invitationModel.create({
+      email,
+      name,
+      role,
+      companyId,
+      companyName: company.name,
+      invitedBy: ctx.userId,
+      inviterName: ctx.name || "Team Admin",
+      token,
+      expiresAt,
+      status: "pending",
+    });
+
+    // Create invitation URL with token
+    const inviteUrl = `${APP_URL}/invite/accept?token=${token}`;
+
+    // Send invitation email via Resend
+    await sendTeamInvitationEmail(
+      email,
+      ctx.name || "Team Admin",
+      company.name,
+      role,
       inviteUrl,
-      undefined, // userId (not known yet)
-      undefined, // phone
       name
     );
 
@@ -163,7 +229,7 @@ export const inviteTeamMember = createRoleAction(["owner", "admin"]).schema(
       success: true,
       message: `Invitation sent to ${email}`,
       data: {
-        membershipId: membership.$id,
+        invitationId: invitation.$id,
         email,
         role,
       },
@@ -301,54 +367,79 @@ export const removeMember = createRoleAction(["owner", "admin"]).schema(
 });
 
 /**
- * Resend invitation to a pending member
+ * Resend invitation to a pending member (using Resend)
  */
 export const resendInvitation = createRoleAction(["owner", "admin"]).schema(
   resendInvitationSchema
 ).action(async ({ parsedInput, ctx }) => {
   try {
-    const { membershipId, companyId, email } = parsedInput;
+    const { invitationId, companyId } = parsedInput;
 
     // Verify user has access to this company
     if (!ctx.isSuperAdmin && "companyId" in ctx && ctx.companyId !== companyId) {
       throw new Error("You do not have permission to manage invitations for this company");
     }
 
-    const teamsService = new AdminTeamsService();
+    const { InvitationModel } = await import("../models/invitation.model");
+    const { sendTeamInvitationEmail } = await import("../email/resend");
 
-    // Get current membership to verify it's pending
-    const membership = await teamsService.getMembership(companyId, membershipId);
+    const invitationModel = new InvitationModel();
 
-    if (membership.confirm) {
-      throw new Error("This user has already accepted the invitation");
+    // Get current invitation
+    const oldInvitation = await invitationModel.findById(invitationId);
+
+    if (!oldInvitation) {
+      throw new Error("Invitation not found");
     }
 
-    // Get role from membership
-    let role: TeamMemberRole = "viewer";
-    if (membership.roles.includes("owner")) role = "owner";
-    else if (membership.roles.includes("admin")) role = "admin";
-    else if (membership.roles.includes("editor")) role = "editor";
+    if (oldInvitation.status === "accepted") {
+      throw new Error("This invitation has already been accepted");
+    }
 
-    // Delete old membership and create new one (which sends new email)
-    await teamsService.deleteMembership(companyId, membershipId);
+    if (oldInvitation.companyId !== companyId) {
+      throw new Error("Invitation does not belong to this company");
+    }
 
-    const inviteUrl = `${APP_URL}/invite/accept`;
+    // Delete old invitation
+    await invitationModel.delete(invitationId);
 
-    await teamsService.createMembership(
-      companyId,
-      [role],
-      email,
+    // Create new invitation with fresh token
+    const token = InvitationModel.generateToken();
+    const expiresAt = InvitationModel.getExpirationDate(7);
+
+    const newInvitation = await invitationModel.create({
+      email: oldInvitation.email,
+      name: oldInvitation.name,
+      role: oldInvitation.role,
+      companyId: oldInvitation.companyId,
+      companyName: oldInvitation.companyName,
+      invitedBy: ctx.userId,
+      inviterName: ctx.name || "Team Admin",
+      token,
+      expiresAt,
+      status: "pending",
+    });
+
+    // Send new invitation email
+    const inviteUrl = `${APP_URL}/invite/accept?token=${token}`;
+
+    await sendTeamInvitationEmail(
+      oldInvitation.email,
+      ctx.name || "Team Admin",
+      oldInvitation.companyName,
+      oldInvitation.role,
       inviteUrl,
-      undefined,
-      undefined,
-      membership.userName
+      oldInvitation.name
     );
 
     revalidatePath(`/org/${companyId}/users`);
 
     return {
       success: true,
-      message: `Invitation resent to ${email}`,
+      message: `Invitation resent to ${oldInvitation.email}`,
+      data: {
+        invitationId: newInvitation.$id,
+      },
     };
   } catch (error) {
     console.error("Resend invitation error:", error);
@@ -473,3 +564,93 @@ export const unsuspendMember = createRoleAction(["owner", "admin"]).inputSchema(
     );
   }
 });
+
+/**
+ * Accept team invitation (using Resend-based invitations)
+ * This action validates the invitation token, creates the user account,
+ * adds them to the team, and logs them in
+ */
+export const acceptInvitation = action
+  .inputSchema(acceptInvitationSchema)
+  .action(async ({ parsedInput }) => {
+    try {
+      const { token, name, password } = parsedInput;
+
+      const { InvitationModel } = await import("../models/invitation.model");
+      const adminAccountService = new AdminAccountService();
+      const adminTeamsService = new AdminTeamsService();
+      const userDataModel = new UserDataAdminModel();
+
+      // 1. Find invitation by token
+      const invitationModel = new InvitationModel();
+      const invitation = await invitationModel.findByToken(token);
+
+      if (!invitation) {
+        throw new Error("Invalid invitation token");
+      }
+
+      // 2. Check if invitation is expired
+      if (invitationModel.isExpired(invitation)) {
+        await invitationModel.updateStatus(invitation.$id, "expired");
+        throw new Error("This invitation has expired");
+      }
+
+      // 3. Check if already accepted
+      if (invitation.status !== "pending") {
+        throw new Error("This invitation has already been used");
+      }
+
+      // 4. Create user account
+      const userId = ID.unique();
+      await adminAccountService.create(
+        userId,
+        invitation.email,
+        password,
+        name
+      );
+
+      // 5. Create session for the new user
+      await adminAccountService.createSession(invitation.email, password);
+
+      // 6. Add user to the company team (AFTER account creation)
+      await adminTeamsService.createMembership(
+        invitation.companyId,
+        [invitation.role], // Appwrite roles
+        invitation.email,
+        undefined, // url (not needed, user already accepting)
+        userId,     // userId - link to the account we just created
+        undefined,  // phone
+        name        // name
+      );
+
+      // 7. Create UserData record
+      await userDataModel.createUserData(userId, {
+        name,
+        email: invitation.email,
+        companyId: invitation.companyId,
+        role: invitation.role,
+      });
+
+      // 8. Update invitation status
+      await invitationModel.updateStatus(invitation.$id, "accepted");
+
+      revalidatePath(`/org/${invitation.companyId}/users`);
+      revalidatePath(`/org/${invitation.companyId}`);
+
+      return {
+        success: true,
+        message: "Invitation accepted successfully! Welcome to the team.",
+        data: {
+          userId,
+          teamId: invitation.companyId,
+          email: invitation.email,
+          role: invitation.role,
+        },
+      };
+    } catch (error) {
+      console.error("Accept invitation error:", error);
+      throw new Error(
+        error instanceof Error ? error.message : "Failed to accept invitation"
+      );
+    }
+  });

@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import {
     Download,
+    Upload,
     Filter as FilterIcon,
     RefreshCw,
     Table as TableIcon,
@@ -33,6 +34,7 @@ import { deleteSubmissionAction } from "@/lib/services/actions/form-submission.a
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { ExportDialog } from "./export-dialog";
+import { ImportDialog } from "./import-dialog";
 import { SubmissionsTable } from "./submissions-table";
 import { SubmissionsFilter } from "./submissions-filter";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +61,7 @@ export function DataCollectionClient({
     const [viewMode, setViewMode] = useState<ViewMode>("table");
     const [showFilters, setShowFilters] = useState(false);
     const [showExportDialog, setShowExportDialog] = useState(false);
+    const [showImportDialog, setShowImportDialog] = useState(false);
     const [viewDialogRow, setViewDialogRow] = useState<SubmissionRow | null>(null);
     const [editDialogRow, setEditDialogRow] = useState<SubmissionRow | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
@@ -265,6 +268,15 @@ export function DataCollectionClient({
                                 )}
 
                                 <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowImportDialog(true)}
+                                >
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Import
+                                </Button>
+
+                                <Button
                                     size="sm"
                                     onClick={() => setShowExportDialog(true)}
                                 >
@@ -346,6 +358,17 @@ export function DataCollectionClient({
                 formId={selectedForm.$id}
                 formFields={selectedForm.fields}
                 selectedIds={selectedIds}
+            />
+
+            <ImportDialog
+                open={showImportDialog}
+                onOpenChange={setShowImportDialog}
+                formId={selectedForm.$id}
+                formName={selectedForm.name}
+                onImportComplete={() => {
+                    router.refresh();
+                    setShowImportDialog(false);
+                }}
             />
 
             {viewDialogRow && (

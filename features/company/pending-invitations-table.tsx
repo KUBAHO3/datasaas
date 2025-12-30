@@ -37,14 +37,13 @@ export function PendingInvitationsTable({
     const [isPending, startTransition] = useTransition();
     const [resendingId, setResendingId] = useState<string | null>(null);
 
-    const handleResendInvitation = (membershipId: string, email: string) => {
-        setResendingId(membershipId);
+    const handleResendInvitation = (invitationId: string) => {
+        setResendingId(invitationId);
         startTransition(async () => {
             try {
                 const result = await resendInvitation({
-                    membershipId,
+                    invitationId,
                     companyId: orgId,
-                    email,
                 });
 
                 if (result?.data?.success) {
@@ -147,7 +146,7 @@ export function PendingInvitationsTable({
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => handleResendInvitation(member.membershipId, member.email)}
+                                            onClick={() => handleResendInvitation(member.membershipId)}
                                             disabled={isResending}
                                         >
                                             <MailCheck className="mr-2 h-4 w-4" />
@@ -163,7 +162,7 @@ export function PendingInvitationsTable({
                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem
-                                                    onClick={() => handleResendInvitation(member.membershipId, member.email)}
+                                                    onClick={() => handleResendInvitation(member.membershipId)}
                                                     disabled={isResending}
                                                 >
                                                     <MailCheck className="mr-2 h-4 w-4" />

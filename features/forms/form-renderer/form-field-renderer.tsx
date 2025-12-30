@@ -297,7 +297,6 @@ function FieldInput({
                     maxRating={field.maxRating || 5}
                     icon={field.icon || "star"}
                     onChange={(value) => setValue(field.id, value)}
-                    {...register(field.id, validation)}
                 />
             );
 

@@ -50,7 +50,7 @@ export const createSubmissionAction = authAction
 
       const submission = await submissionModel.create({
         formId,
-        formVersion: form.version,
+        formVersion: form.version || 1, // Default to version 1 if not set
         companyId: form.companyId,
         data,
         status,
@@ -174,7 +174,7 @@ export const createPublicSubmissionAction = action
       }
       const submission = await submissionModel.create({
         formId,
-        formVersion: form.version,
+        formVersion: form.version || 1, // Default to version 1 if not set
         companyId: form.companyId,
         data,
         status,

@@ -101,9 +101,8 @@ export const removeMemberSchema = z.object({
 });
 
 export const resendInvitationSchema = z.object({
-  membershipId: z.string().min(1, "Membership ID is required"),
+  invitationId: z.string().min(1, "Invitation ID is required"),
   companyId: z.string().min(1, "Company ID is required"),
-  email: z.string().email("Please enter a valid email address"),
 });
 
 export const listTeamMembersSchema = z.object({
@@ -123,6 +122,25 @@ export const unsuspendMemberSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
 });
 
+export const acceptInvitationSchema = z
+  .object({
+    token: z.string().min(1, "Invitation token is required"),
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .max(100, "Password must be at most 100 characters")
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+        "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+      ),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
@@ -134,3 +152,4 @@ export type ResendInvitationInput = z.infer<typeof resendInvitationSchema>;
 export type ListTeamMembersInput = z.infer<typeof listTeamMembersSchema>;
 export type SuspendMemberInput = z.infer<typeof suspendMemberSchema>;
 export type UnsuspendMemberInput = z.infer<typeof unsuspendMemberSchema>;
+export type AcceptInvitationInput = z.infer<typeof acceptInvitationSchema>;

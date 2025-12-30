@@ -63,7 +63,47 @@ export function FormBuilder({ form: initialForm, orgId }: FormBuilderProps) {
         },
     });
 
+    function validateFormFields(): { isValid: boolean; errors: string[] } {
+        const errors: string[] = [];
+        const fieldTypesRequiringOptions = ["dropdown", "radio", "checkbox", "multi_select"];
+
+        form.fields.forEach((field, index) => {
+            // Check if field has a label
+            if (!field.label || field.label.trim() === "") {
+                errors.push(`Field ${index + 1} is missing a label`);
+            }
+
+            // Check if fields requiring options have at least one option
+            if (fieldTypesRequiringOptions.includes(field.type)) {
+                const options = field.options || [];
+                if (options.length === 0) {
+                    errors.push(`Field "${field.label || `#${index + 1}`}" requires at least one option`);
+                } else {
+                    // Check if all options have labels
+                    const emptyOptions = options.filter(opt => !opt.label || opt.label.trim() === "");
+                    if (emptyOptions.length > 0) {
+                        errors.push(`Field "${field.label || `#${index + 1}`}" has options without labels`);
+                    }
+                }
+            }
+        });
+
+        return {
+            isValid: errors.length === 0,
+            errors,
+        };
+    }
+
     function handleSave() {
+        // Validate form fields before saving
+        const validation = validateFormFields();
+        if (!validation.isValid) {
+            toast.error("Form has validation errors", {
+                description: validation.errors[0] + (validation.errors.length > 1 ? ` (and ${validation.errors.length - 1} more)` : ""),
+            });
+            return;
+        }
+
         saveForm({
             formId: form.$id,
             name: form.name,
@@ -81,6 +121,24 @@ export function FormBuilder({ form: initialForm, orgId }: FormBuilderProps) {
         // Validate form has at least one field
         if (form.fields.length === 0) {
             toast.error("Cannot publish form without any fields");
+            return;
+        }
+
+        // Validate form fields
+        const validation = validateFormFields();
+        if (!validation.isValid) {
+            toast.error("Cannot publish form with validation errors", {
+                description: (
+                    <div className="mt-2 space-y-1">
+                        {validation.errors.slice(0, 3).map((error, i) => (
+                            <div key={i} className="text-sm">• {error}</div>
+                        ))}
+                        {validation.errors.length > 3 && (
+                            <div className="text-sm">• ...and {validation.errors.length - 3} more</div>
+                        )}
+                    </div>
+                ),
+            });
             return;
         }
 

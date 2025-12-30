@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { AUTH_COOKIE } from "@/lib/constants";
 import { SessionAccountService } from "@/lib/services/core/base-account";
@@ -6,10 +6,11 @@ import { DocumentStorageAdminService } from "@/lib/services/storage/document-sto
 import { Permission, Role } from "node-appwrite";
 
 export const runtime = "nodejs";
-// ✅ Increase body size limit for file uploads (default is 4MB)
+export const dynamic = "force-dynamic";
 export const maxDuration = 60; // 60 seconds max for file upload
 
-export async function POST(request: NextRequest) {
+// ✅ Use native Request instead of NextRequest to avoid body parsing issues
+export async function POST(request: Request) {
   try {
     console.log("📥 Upload request received");
 
@@ -38,9 +39,22 @@ export async function POST(request: NextRequest) {
 
     console.log("✅ User authenticated:", user.$id);
 
-    // ✅ Parse FormData
+    // ✅ Parse FormData with error handling for Next.js 16 Turbopack issue
     console.log("📦 Parsing FormData...");
-    const formData = await request.formData();
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch (formDataError) {
+      console.error("❌ FormData parsing error:", formDataError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Failed to parse upload data. Please try again."
+        },
+        { status: 400 }
+      );
+    }
+
     const file = formData.get("file") as File | null;
     const companyId = formData.get("companyId") as string | null;
 

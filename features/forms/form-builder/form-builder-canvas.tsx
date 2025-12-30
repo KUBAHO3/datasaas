@@ -7,9 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormField } from "@/lib/types/form-types";
 import { cn } from "@/lib/utils";
 import { createDefaultField } from "@/lib/utils/forms-utils";
-import { GripVertical, Plus, Settings, Trash2 } from "lucide-react";
+import { GripVertical, Plus, Settings, Trash2, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { FieldConfigDialog } from "./field-config-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface FormBuilderCanvasProps {
     form: Form;
@@ -116,8 +118,27 @@ function FieldCard({
     onDelete: () => void;
     onConfig: () => void;
 }) {
+    // Check if field is incomplete
+    const fieldTypesRequiringOptions = ["dropdown", "radio", "checkbox", "multi_select"];
+    const requiresOptions = fieldTypesRequiringOptions.includes(field.type);
+    const hasOptions = field.options && field.options.length > 0;
+    const hasEmptyLabel = !field.label || field.label.trim() === "";
+    const hasEmptyOptions = field.options?.some(opt => !opt.label || opt.label.trim() === "") || false;
+
+    const isIncomplete = hasEmptyLabel || (requiresOptions && !hasOptions) || hasEmptyOptions;
+    const warningMessage = hasEmptyLabel
+        ? "Field label is required"
+        : requiresOptions && !hasOptions
+        ? "This field requires at least one option"
+        : hasEmptyOptions
+        ? "Some options are missing labels"
+        : "";
+
     return (
-        <Card className="p-3 md:p-4 hover:shadow-md transition-shadow group">
+        <Card className={cn(
+            "p-3 md:p-4 hover:shadow-md transition-shadow group",
+            isIncomplete && "border-orange-500/50 bg-orange-50/10 dark:bg-orange-950/10"
+        )}>
             <div className="flex items-start gap-2 md:gap-3">
                 <div className="cursor-grab active:cursor-grabbing pt-1 hidden md:block">
                     <GripVertical className="h-5 w-5 text-muted-foreground" />
@@ -125,13 +146,30 @@ function FieldCard({
 
                 <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex-1">
-                            <label className="text-sm font-medium">
-                                {field.label}
-                                {field.required && <span className="text-destructive ml-1">*</span>}
-                            </label>
-                            {field.description && (
-                                <p className="text-xs text-muted-foreground mt-1">{field.description}</p>
+                        <div className="flex-1 flex items-start gap-2">
+                            <div className="flex-1">
+                                <label className="text-sm font-medium">
+                                    {field.label || <span className="text-muted-foreground italic">Untitled Field</span>}
+                                    {field.required && <span className="text-destructive ml-1">*</span>}
+                                </label>
+                                {field.description && (
+                                    <p className="text-xs text-muted-foreground mt-1">{field.description}</p>
+                                )}
+                            </div>
+                            {isIncomplete && (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger>
+                                            <Badge variant="outline" className="border-orange-500 text-orange-600 dark:text-orange-400 gap-1">
+                                                <AlertCircle className="h-3 w-3" />
+                                                <span className="hidden sm:inline">Incomplete</span>
+                                            </Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>{warningMessage}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
                             )}
                         </div>
                     </div>

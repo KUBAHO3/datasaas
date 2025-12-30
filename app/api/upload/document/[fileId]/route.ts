@@ -1,13 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { AUTH_COOKIE } from "@/lib/constants";
 import { SessionAccountService } from "@/lib/services/core/base-account";
 import { DocumentStorageAdminService } from "@/lib/services/storage/document-storage.service";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ fileId: string }> }
 ) {
   try {
@@ -77,7 +78,7 @@ export async function GET(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ fileId: string }> }
 ) {
   try {
