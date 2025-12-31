@@ -18,7 +18,7 @@ export default async function DataCollectionPage({
 }: DataCollectionPageProps) {
     const { orgId } = await params;
     const { formId } = await searchParams;
-    const userContext = await requireCompanyAccess(orgId);
+     await requireCompanyAccess(orgId);
 
     return (
         <div className="flex-1 space-y-6 p-6">

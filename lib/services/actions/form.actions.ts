@@ -8,6 +8,7 @@ import {
   listFormsSchema,
   publishFormSchema,
   updateFormSchema,
+  cloneFormSchema,
 } from "@/lib/schemas/form-schemas";
 import { CompanyAdminModel } from "../models/company.model";
 import { FormAdminModel, FormSessionModel } from "../models/form.model";
@@ -340,6 +341,67 @@ export const listFormsAction = authAction
       console.error("List forms error:", error);
       return {
         error: error instanceof Error ? error.message : "Failed to list forms",
+      };
+    }
+  });
+
+export const cloneFormAction = authAction
+  .inputSchema(cloneFormSchema)
+  .action(async ({ parsedInput, ctx }) => {
+    try {
+      const { formId, newName } = parsedInput;
+
+      const formModel = new FormAdminModel();
+      const originalForm = await formModel.findById(formId);
+
+      if (!originalForm) {
+        return { error: "Form not found" };
+      }
+
+      const companyModel = new CompanyAdminModel();
+      const company = await companyModel.findByUserId(ctx.userId);
+
+      if (!company || company.$id !== originalForm.companyId) {
+        return { error: "Unauthorized to clone this form" };
+      }
+
+      if (company.status !== "active") {
+        return { error: "Your company must be active to clone forms" };
+      }
+
+      // Create a copy of the form with a new name
+      const clonedName = newName || `${originalForm.name} (Copy)`;
+
+      // Clone the form data
+      const clonedFormData = {
+        name: clonedName,
+        description: originalForm.description,
+        companyId: originalForm.companyId,
+        createdBy: ctx.userId,
+        updatedBy: ctx.userId,
+        status: "draft" as const,
+        version: 1,
+        fields: originalForm.fields,
+        steps: originalForm.steps,
+        conditionalLogic: originalForm.conditionalLogic,
+        settings: originalForm.settings,
+        theme: originalForm.theme,
+        accessControl: originalForm.accessControl,
+      };
+
+      const clonedForm = await formModel.create(clonedFormData);
+
+      revalidatePath(`/org/${company.$id}/forms`);
+
+      return {
+        success: true,
+        form: clonedForm,
+        message: "Form cloned successfully!",
+      };
+    } catch (error) {
+      console.error("Clone form error:", error);
+      return {
+        error: error instanceof Error ? error.message : "Failed to clone form",
       };
     }
   });

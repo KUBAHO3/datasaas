@@ -62,7 +62,7 @@ export default function UserMenu({
                     <DropdownMenuSeparator />
 
                     <DropdownMenuItem asChild>
-                        <Link href="/settings/profile">
+                        <Link href="/dashboard/profile">
                             <UserCircle className="mr-2 h-4 w-4" />
                             Profile
                         </Link>

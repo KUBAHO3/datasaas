@@ -80,6 +80,11 @@ abstract class BaseDBModel<T = any> {
 
   protected abstract getClient(): Promise<any>;
 
+  protected async getDatabases() {
+    const client = await this.getClient();
+    return client.databases;
+  }
+
   async findMany(options: FindOptions = {}): Promise<T[]> {
     const client = await this.getClient();
     const queries: string[] = [];

@@ -149,10 +149,11 @@ export function SuperAdminSidebar({ user }: SuperAdminSidebarProps) {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                            <DropdownMenuTrigger asChild suppressHydrationWarning>
                                 <SidebarMenuButton
                                     size="lg"
                                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                                    suppressHydrationWarning
                                 >
                                     <Avatar className="h-8 w-8 rounded-lg">
                                         <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
@@ -193,7 +194,7 @@ export function SuperAdminSidebar({ user }: SuperAdminSidebarProps) {
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem asChild>
-                                    <Link href="/admin/settings/profile">
+                                    <Link href="/dashboard/profile">
                                         <User className="mr-2 h-4 w-4" />
                                         Profile
                                     </Link>

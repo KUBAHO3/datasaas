@@ -87,7 +87,7 @@ export class AdminUsersService extends AdminDBModel<UserData> {
     name?: string
   ) {
     const client = await this.getClient();
-    return await client.users.create(userId, email, password, name);
+    return await client.users.create(userId, email, undefined, password, name);
   }
 
   async createWithEmail(email: string, password: string, name?: string) {

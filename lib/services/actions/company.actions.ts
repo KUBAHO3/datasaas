@@ -13,6 +13,7 @@ import {
   resendNotificationSchema,
   suspendCompanySchema,
   updateCompanySchema,
+  updateOwnCompanySchema,
 } from "@/lib/schemas/company-schemas";
 import { AdminUsersService, UserDataAdminModel } from "../models/users.model";
 import { AdminTeamsService } from "../core/base-teams";
@@ -492,6 +493,57 @@ export const updateCompanyAction = superAdminAction
       return {
         error:
           error instanceof Error ? error.message : "Failed to update company",
+      };
+    }
+  });
+
+// Action for company owners/admins to update their own company profile
+export const updateOwnCompanyAction = authAction
+  .inputSchema(updateOwnCompanySchema)
+  .action(async ({ parsedInput, ctx }) => {
+    try {
+      const { companyId, ...updateData } = parsedInput;
+
+      // Verify user is owner or admin of this company
+      if (!ctx.userData?.companyId) {
+        return { error: "You are not associated with any company" };
+      }
+
+      if (ctx.userData.companyId !== companyId) {
+        return { error: "You can only update your own company profile" };
+      }
+
+      const userRole = ctx.userData.role;
+      if (userRole !== "owner" && userRole !== "admin") {
+        return { error: "Only owners and admins can update company profile" };
+      }
+
+      const companyModel = new CompanyAdminModel();
+      const company = await companyModel.findById(companyId);
+
+      if (!company) {
+        return { error: "Company not found" };
+      }
+
+      // Only allow updating if company is active
+      if (company.status !== "active") {
+        return { error: "Cannot update company profile while status is not active" };
+      }
+
+      await companyModel.updateById(companyId, updateData);
+
+      revalidatePath(`/org/${companyId}`);
+      revalidatePath(`/org/${companyId}/settings`);
+
+      return {
+        success: true,
+        message: "Company profile updated successfully",
+      };
+    } catch (error) {
+      console.error("Update own company error:", error);
+      return {
+        error:
+          error instanceof Error ? error.message : "Failed to update company profile",
       };
     }
   });

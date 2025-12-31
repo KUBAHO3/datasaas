@@ -54,7 +54,8 @@ export class ImportJobAdminModel extends AdminDBModel<ImportJob> {
     companyId: string,
     limit: number = 50
   ): Promise<ImportJob[]> {
-    const results = await this.databases.listDocuments(
+    const databases = await this.getDatabases();
+    const results = await databases.listDocuments(
       this.databaseId,
       this.collectionId,
       [Query.equal("companyId", companyId), Query.limit(limit), Query.orderDesc("$createdAt")]
@@ -67,7 +68,8 @@ export class ImportJobAdminModel extends AdminDBModel<ImportJob> {
    * List import jobs by form
    */
   async listByForm(formId: string, limit: number = 50): Promise<ImportJob[]> {
-    const results = await this.databases.listDocuments(
+    const databases = await this.getDatabases();
+    const results = await databases.listDocuments(
       this.databaseId,
       this.collectionId,
       [Query.equal("formId", formId), Query.limit(limit), Query.orderDesc("$createdAt")]
@@ -80,7 +82,8 @@ export class ImportJobAdminModel extends AdminDBModel<ImportJob> {
    * Get active/pending jobs for a company
    */
   async getActiveJobs(companyId: string): Promise<ImportJob[]> {
-    const results = await this.databases.listDocuments(
+    const databases = await this.getDatabases();
+    const results = await databases.listDocuments(
       this.databaseId,
       this.collectionId,
       [
@@ -165,7 +168,8 @@ export class ImportJobAdminModel extends AdminDBModel<ImportJob> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 
-    const results = await this.databases.listDocuments(
+    const databases = await this.getDatabases();
+    const results = await databases.listDocuments(
       this.databaseId,
       this.collectionId,
       [

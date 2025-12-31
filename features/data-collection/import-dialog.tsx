@@ -29,7 +29,7 @@ import {
 } from "@/lib/services/actions/import.actions";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, X } from "lucide-react";
 import { toast } from "sonner";
-import { storage } from "@/lib/services/core/appwrite";
+import { storage } from "@/lib/services/core/appwrite-client";
 import { IMPORT_TEMP_BUCKET_ID } from "@/lib/env-config";
 import { ID } from "appwrite";
 

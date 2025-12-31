@@ -18,7 +18,7 @@ import { ImportService } from "../import/import.service";
 import { SubmissionValueHelpers } from "@/lib/utils/submission-utils";
 import { canAcceptSubmissions } from "@/lib/utils/form-validation";
 import { revalidatePath } from "next/cache";
-import { storage } from "../core/appwrite";
+import { createAdminClient } from "../core/appwrite";
 import { IMPORT_TEMP_BUCKET_ID } from "@/lib/env-config";
 import { ID } from "node-appwrite";
 import type { RowError, ErrorReportRow } from "@/lib/types/import-types";
@@ -83,7 +83,8 @@ export const parseImportFileAction = authAction
       }
 
       // Download file from Appwrite Storage
-      const fileBuffer = await storage.getFileDownload(
+      const adminClient = await createAdminClient();
+      const fileBuffer = await adminClient.storage.getFileDownload(
         IMPORT_TEMP_BUCKET_ID,
         fileId
       );
@@ -175,7 +176,8 @@ export const validateImportDataAction = authAction
       }
 
       // Download and parse file
-      const fileBuffer = await storage.getFileDownload(
+      const adminClient = await createAdminClient();
+      const fileBuffer = await adminClient.storage.getFileDownload(
         IMPORT_TEMP_BUCKET_ID,
         fileId
       );
@@ -262,7 +264,8 @@ export const executeImportAction = authAction
       }
 
       // Download and parse file
-      const fileBuffer = await storage.getFileDownload(
+      const adminClient = await createAdminClient();
+      const fileBuffer = await adminClient.storage.getFileDownload(
         IMPORT_TEMP_BUCKET_ID,
         fileId
       );

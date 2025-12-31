@@ -87,7 +87,7 @@ export function OnboardingNavbar({ userName, userEmail }: OnboardingNavbarProps)
                                 </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                                <Link href="/profile" className="cursor-pointer">
+                                <Link href="/dashboard/profile" className="cursor-pointer">
                                     <User className="mr-2 h-4 w-4" />
                                     <span>Profile</span>
                                 </Link>

@@ -1,7 +1,8 @@
-export interface Invitation {
-  $id: string;
-  $createdAt: string;
-  $updatedAt: string;
+import { Models } from "node-appwrite";
+
+export type InvitationStatus = "pending" | "accepted" | "expired" | "cancelled";
+
+export interface Invitation extends Models.Document {
   email: string;
   name?: string;
   role: "owner" | "admin" | "editor" | "viewer";
@@ -9,9 +10,9 @@ export interface Invitation {
   companyName: string;
   invitedBy: string;
   inviterName: string;
-  token: string; // Unique token for accepting invitation
+  token: string;
   expiresAt: string;
-  status: "pending" | "accepted" | "expired" | "cancelled";
+  status: InvitationStatus;
 }
 
 export interface CreateInvitationData {

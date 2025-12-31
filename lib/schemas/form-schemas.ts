@@ -177,3 +177,10 @@ export const editSubmissionSchema = z.object({
 });
 
 export type EditSubmissionInput = z.infer<typeof editSubmissionSchema>;
+
+export const cloneFormSchema = z.object({
+  formId: z.string(),
+  newName: z.string().min(1, "Form name is required").max(200).optional(),
+});
+
+export type CloneFormInput = z.infer<typeof cloneFormSchema>;
