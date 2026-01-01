@@ -18,9 +18,7 @@ import { ImportService } from "../import/import.service";
 import { SubmissionValueHelpers } from "@/lib/utils/submission-utils";
 import { canAcceptSubmissions } from "@/lib/utils/form-validation";
 import { revalidatePath } from "next/cache";
-import { createAdminClient } from "../core/appwrite";
-import { IMPORT_TEMP_BUCKET_ID } from "@/lib/env-config";
-import { ID } from "node-appwrite";
+import { CompanyDocumentsStorageModel } from "../models/storage.model";
 import type { RowError, ErrorReportRow } from "@/lib/types/import-types";
 
 /**
@@ -39,10 +37,6 @@ export const uploadImportFileAction = authAction
 
       if (!form) {
         return { error: "Form not found" };
-      }
-
-      if (form.companyId !== ctx.user.companyId) {
-        return { error: "Unauthorized access to this form" };
       }
 
       return {
@@ -78,20 +72,13 @@ export const parseImportFileAction = authAction
         return { error: "Form not found" };
       }
 
-      if (form.companyId !== ctx.user.companyId) {
-        return { error: "Unauthorized access to this form" };
-      }
-
       // Download file from Appwrite Storage
-      const adminClient = await createAdminClient();
-      const fileBuffer = await adminClient.storage.getFileDownload(
-        IMPORT_TEMP_BUCKET_ID,
-        fileId
-      );
+      const storageModel = new CompanyDocumentsStorageModel();
+      const fileBuffer = await storageModel.downloadImportFile(fileId);
 
-      // Parse file
+      // Parse file (fileBuffer is already an ArrayBuffer)
       const parsedData = await ImportParserService.parseFile(
-        Buffer.from(await fileBuffer.arrayBuffer()),
+        Buffer.from(fileBuffer),
         "import.xlsx"
       );
 
@@ -151,10 +138,6 @@ export const validateImportDataAction = authAction
         return { error: "Form not found" };
       }
 
-      if (form.companyId !== ctx.user.companyId) {
-        return { error: "Unauthorized access to this form" };
-      }
-
       // Validate column mapping
       const parsedForm = {
         ...form,
@@ -176,14 +159,11 @@ export const validateImportDataAction = authAction
       }
 
       // Download and parse file
-      const adminClient = await createAdminClient();
-      const fileBuffer = await adminClient.storage.getFileDownload(
-        IMPORT_TEMP_BUCKET_ID,
-        fileId
-      );
+      const storageModel = new CompanyDocumentsStorageModel();
+      const fileBuffer = await storageModel.downloadImportFile(fileId);
 
       const parsedData = await ImportParserService.parseFile(
-        Buffer.from(await fileBuffer.arrayBuffer()),
+        Buffer.from(fileBuffer),
         "import.xlsx"
       );
 
@@ -227,10 +207,6 @@ export const executeImportAction = authAction
         return { error: "Form not found" };
       }
 
-      if (form.companyId !== ctx.user.companyId) {
-        return { error: "Unauthorized access to this form" };
-      }
-
       // Parse form data
       const parsedForm = {
         ...form,
@@ -264,14 +240,11 @@ export const executeImportAction = authAction
       }
 
       // Download and parse file
-      const adminClient = await createAdminClient();
-      const fileBuffer = await adminClient.storage.getFileDownload(
-        IMPORT_TEMP_BUCKET_ID,
-        fileId
-      );
+      const storageModel = new CompanyDocumentsStorageModel();
+      const fileBuffer = await storageModel.downloadImportFile(fileId);
 
       const parsedData = await ImportParserService.parseFile(
-        Buffer.from(await fileBuffer.arrayBuffer()),
+        Buffer.from(fileBuffer),
         "import.xlsx"
       );
 

@@ -21,7 +21,8 @@ import {
     Table as TableIcon,
     LayoutGrid,
     Search,
-    Trash2
+    Trash2,
+    Sparkles
 } from "lucide-react";
 import { SubmissionViewDialog } from "./submission-view-dialog";
 import { SubmissionEditDialog } from "./submission-edit-dialog";
@@ -35,6 +36,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { ExportDialog } from "./export-dialog";
 import { ImportDialog } from "./import-dialog";
+import { AutoImportDialog } from "./auto-import-dialog";
 import { SubmissionsTable } from "./submissions-table";
 import { SubmissionsFilter } from "./submissions-filter";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +64,7 @@ export function DataCollectionClient({
     const [showFilters, setShowFilters] = useState(false);
     const [showExportDialog, setShowExportDialog] = useState(false);
     const [showImportDialog, setShowImportDialog] = useState(false);
+    const [showAutoImportDialog, setShowAutoImportDialog] = useState(false);
     const [viewDialogRow, setViewDialogRow] = useState<SubmissionRow | null>(null);
     const [editDialogRow, setEditDialogRow] = useState<SubmissionRow | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
@@ -170,7 +173,6 @@ export function DataCollectionClient({
     }
 
     const completedCount = rows.filter(r => r.submission.status === "completed").length;
-    const draftCount = rows.filter(r => r.submission.status === "draft").length;
 
     return (
         <div className="space-y-6">
@@ -191,7 +193,7 @@ export function DataCollectionClient({
                                     <SelectContent>
                                         {forms.map((form) => (
                                             <SelectItem key={form.$id} value={form.$id}>
-                                                {form.name} ({form.metadata.responseCount || 0} submissions)
+                                                {form.name} ({form.metadata?.responseCount || 0} submissions)
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -200,9 +202,6 @@ export function DataCollectionClient({
                                 <div className="flex gap-2">
                                     <Badge variant="secondary">
                                         {completedCount} Completed
-                                    </Badge>
-                                    <Badge variant="outline">
-                                        {draftCount} Draft
                                     </Badge>
                                 </div>
                             </div>
@@ -274,6 +273,16 @@ export function DataCollectionClient({
                                 >
                                     <Upload className="h-4 w-4 mr-2" />
                                     Import
+                                </Button>
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowAutoImportDialog(true)}
+                                    className="border-primary/50 text-primary hover:bg-primary/10"
+                                >
+                                    <Sparkles className="h-4 w-4 mr-2" />
+                                    Auto-Import
                                 </Button>
 
                                 <Button
@@ -368,6 +377,16 @@ export function DataCollectionClient({
                 onImportComplete={() => {
                     router.refresh();
                     setShowImportDialog(false);
+                }}
+            />
+
+            <AutoImportDialog
+                open={showAutoImportDialog}
+                onOpenChange={setShowAutoImportDialog}
+                companyId={orgId}
+                onImportComplete={() => {
+                    router.refresh();
+                    setShowAutoImportDialog(false);
                 }}
             />
 

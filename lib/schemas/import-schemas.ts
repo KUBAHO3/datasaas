@@ -22,6 +22,14 @@ export const columnMappingSchema = z.record(
 );
 
 /**
+ * Upload file input schema (for FormData)
+ */
+export const uploadFileInputSchema = z.object({
+  formId: z.string().min(1, "Form ID is required"),
+  // File will be extracted from FormData
+});
+
+/**
  * Parse file input schema
  */
 export const parseFileInputSchema = z.object({

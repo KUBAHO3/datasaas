@@ -4,7 +4,7 @@ import { SubmissionValue } from "@/lib/types/submission-types";
 import { AdminDBModel, SessionDBModel } from "../core/base-db-model";
 import { DATABASE_ID, SUBMISSION_VALUES_TABLE_ID } from "@/lib/env-config";
 import { SubmissionValueHelpers } from "@/lib/utils/submission-utils";
-import { ID, Query } from "node-appwrite";
+import { ID, Query, Permission, Role } from "node-appwrite";
 
 export class SubmissionValueSessionModel extends SessionDBModel<SubmissionValue> {
   constructor() {
@@ -65,7 +65,17 @@ export class SubmissionValueAdminModel extends AdminDBModel<SubmissionValue> {
 
   async create(data: Partial<SubmissionValue>): Promise<SubmissionValue> {
     const dbData = SubmissionValueHelpers.toDB(data);
-    const result = await super.create(dbData, ID.unique());
+
+    const permissions: string[] = [
+      Permission.read(Role.team(data.companyId!)),
+      Permission.update(Role.team(data.companyId!, "owner")),
+      Permission.update(Role.team(data.companyId!, "admin")),
+      Permission.delete(Role.team(data.companyId!, "owner")),
+      Permission.delete(Role.team(data.companyId!, "admin")),
+    ];
+    
+
+    const result = await super.create(dbData, ID.unique(), permissions);
     return SubmissionValueHelpers.fromDB(result);
   }
 

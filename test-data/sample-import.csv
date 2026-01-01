@@ -1,0 +1,12 @@
+Full Name,Work Email,Phone Number,Years of Experience,Expected Salary,Start Date,Department,Employment Type,Agree to Terms,Skills
+John Smith,john.smith@example.com,+1-555-0101,5,85000,2025-03-01,Engineering,Full-time,true,"JavaScript,React,Node.js"
+Sarah Johnson,sarah.j@example.com,+1-555-0102,3,70000,2025-03-15,Marketing,Full-time,yes,"Python,Data Analysis"
+Michael Brown,michael.b@example.com,+1-555-0103,7,95000,2025-04-01,Engineering,Full-time,1,"Java,Spring,AWS"
+Emily Davis,emily.d@example.com,+1-555-0104,2,60000,2025-04-15,Sales,Part-time,true,"CRM,Communication"
+Robert Wilson,robert.w@example.com,+1-555-0105,10,120000,2025-05-01,Engineering,Full-time,yes,"Python,Machine Learning,TensorFlow"
+Jennifer Martinez,jennifer.m@example.com,+1-555-0106,4,75000,2025-05-15,HR,Full-time,true,"Recruitment,HRIS"
+David Anderson,david.a@example.com,+1-555-0107,6,90000,2025-06-01,Engineering,Contract,1,"React,TypeScript,GraphQL"
+Lisa Taylor,lisa.t@example.com,+1-555-0108,1,55000,2025-06-15,Marketing,Full-time,yes,"Content Writing,SEO"
+James Thomas,james.t@example.com,+1-555-0109,8,105000,2025-07-01,Engineering,Full-time,true,"Go,Kubernetes,DevOps"
+Maria Garcia,maria.g@example.com,+1-555-0110,3,68000,2025-07-15,Sales,Full-time,1,"Sales,Negotiation"
+Invalid User,not-an-email,abc,999,-5000,not-a-date,Unknown,Maybe,no,None

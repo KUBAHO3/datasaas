@@ -4,6 +4,7 @@ import { SubmissionValueAdminModel } from "@/lib/services/models/submission-valu
 import { SubmissionHelpers } from "@/lib/utils/submission-utils";
 import { DataCollectionClient } from "./data-collection-client";
 import { DataCollectionStats } from "./data-collection-stats";
+import { NoFormsState } from "./no-forms-state";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cache } from "react";
@@ -45,13 +46,7 @@ export async function DataCollectionContent({
         : forms[0];
 
     if (!selectedForm) {
-        return (
-            <div className="text-center py-12">
-                <p className="text-muted-foreground">
-                    No published forms found. Create a form to start collecting data.
-                </p>
-            </div>
-        );
+        return <NoFormsState orgId={orgId} />;
     }
 
     const rows = await getSubmissionsWithValues(selectedForm.$id);

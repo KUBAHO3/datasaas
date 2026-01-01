@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { Form } from "@/lib/types/form-types";
 import { SubmissionRow } from "@/lib/types/submission-types";
 import {
@@ -13,13 +14,15 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
+    DropdownMenuCheckboxItem,
+    DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
     MoreHorizontal,
@@ -28,6 +31,7 @@ import {
     Trash2,
     CheckCircle,
     Clock,
+    Columns3,
 } from "lucide-react";
 import { SubmissionHelpers } from "@/lib/utils/submission-utils";
 import { format } from "date-fns";
@@ -55,13 +59,29 @@ export function SubmissionsTable({
     onBulkDelete,
     onExport,
 }: SubmissionsTableProps) {
-    const visibleFields = form.fields
-        .filter(f =>
+    // All available fields (excluding structural fields)
+    const allFields = useMemo(() =>
+        form.fields.filter(f =>
             f.type !== "section_header" &&
             f.type !== "divider" &&
             f.type !== "rich_text"
-        )
-        .slice(0, 5);
+        ), [form.fields]
+    );
+
+    // Column visibility state - initially show first 5 columns
+    const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(() => {
+        const initial: Record<string, boolean> = {};
+        allFields.forEach((field, index) => {
+            initial[field.id] = index < 5; // Show first 5 by default
+        });
+        return initial;
+    });
+
+    // Get visible fields based on column visibility state
+    const visibleFields = useMemo(() =>
+        allFields.filter(field => columnVisibility[field.id]),
+        [allFields, columnVisibility]
+    );
 
     function handleSelectAll(checked: boolean) {
         if (checked) {
@@ -79,11 +99,72 @@ export function SubmissionsTable({
         }
     }
 
+    function toggleColumnVisibility(fieldId: string) {
+        setColumnVisibility(prev => ({
+            ...prev,
+            [fieldId]: !prev[fieldId]
+        }));
+    }
+
+    function showAllColumns() {
+        const allVisible: Record<string, boolean> = {};
+        allFields.forEach(field => {
+            allVisible[field.id] = true;
+        });
+        setColumnVisibility(allVisible);
+    }
+
+    function hideAllColumns() {
+        const allHidden: Record<string, boolean> = {};
+        allFields.forEach(field => {
+            allHidden[field.id] = false;
+        });
+        setColumnVisibility(allHidden);
+    }
+
     const allSelected = selectedIds.length === rows.length && rows.length > 0;
     const someSelected = selectedIds.length > 0 && !allSelected;
+    const visibleColumnsCount = Object.values(columnVisibility).filter(Boolean).length;
 
     return (
         <Card>
+            <CardHeader className="border-b py-3">
+                <div className="flex items-center justify-between">
+                    <CardTitle className="text-base font-medium">
+                        Submissions ({rows.length})
+                    </CardTitle>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="gap-2">
+                                <Columns3 className="h-4 w-4" />
+                                Columns ({visibleColumnsCount}/{allFields.length})
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[200px]">
+                            <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={showAllColumns}>
+                                Show All
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={hideAllColumns}>
+                                Hide All
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <div className="max-h-[300px] overflow-y-auto">
+                                {allFields.map((field) => (
+                                    <DropdownMenuCheckboxItem
+                                        key={field.id}
+                                        checked={columnVisibility[field.id]}
+                                        onCheckedChange={() => toggleColumnVisibility(field.id)}
+                                    >
+                                        {field.label}
+                                    </DropdownMenuCheckboxItem>
+                                ))}
+                            </div>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            </CardHeader>
             <CardContent className="p-0">
                 <div className="relative w-full overflow-auto">
                     <Table>

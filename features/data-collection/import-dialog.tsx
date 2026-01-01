@@ -27,11 +27,9 @@ import {
   validateImportDataAction,
   executeImportAction,
 } from "@/lib/services/actions/import.actions";
+import { uploadFileWithFormData } from "@/lib/services/actions/upload-file.action";
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, X } from "lucide-react";
 import { toast } from "sonner";
-import { storage } from "@/lib/services/core/appwrite-client";
-import { IMPORT_TEMP_BUCKET_ID } from "@/lib/env-config";
-import { ID } from "appwrite";
 
 interface ImportDialogProps {
   open: boolean;
@@ -150,17 +148,25 @@ export function ImportDialog({
     setIsUploading(true);
 
     try {
-      // Upload to Appwrite Storage
-      const uploadedFile = await storage.createFile(
-        IMPORT_TEMP_BUCKET_ID,
-        ID.unique(),
-        file
-      );
+      // ✅ Upload via server action (proper pattern)
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("formId", formId);
 
-      setFileId(uploadedFile.$id);
+      const result = await uploadFileWithFormData(formData);
 
-      // Parse file
-      parseFile({ formId, fileId: uploadedFile.$id });
+      if (result.error) {
+        toast.error(result.error);
+        setIsUploading(false);
+        return;
+      }
+
+      if (result.success && result.data) {
+        setFileId(result.data.fileId);
+
+        // Parse file
+        parseFile({ formId, fileId: result.data.fileId });
+      }
     } catch (error) {
       console.error("File upload error:", error);
       toast.error("Failed to upload file");
@@ -223,7 +229,9 @@ export function ImportDialog({
     onOpenChange(false);
   };
 
-  const mappedFieldCount = Object.keys(columnMapping).length;
+  const mappedFieldCount = Object.values(columnMapping).filter(
+    (value) => value && value !== "__skip__"
+  ).length;
   const unmappedFieldCount = columns.length - mappedFieldCount;
 
   return (
@@ -239,7 +247,7 @@ export function ImportDialog({
         <div className="space-y-6">
           {/* Progress Indicator */}
           <div className="flex items-center justify-between text-sm">
-            <div className={`flex items-center gap-2 ${step === "upload" ? "text-primary font-medium" : step !== "upload" ? "text-muted-foreground" : ""}`}>
+            <div className={`flex items-center gap-2 ${step === "upload" ? "text-primary font-medium" : step !== "upload" as string ? "text-muted-foreground" : ""}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step === "upload" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
                 1
               </div>
@@ -362,7 +370,7 @@ export function ImportDialog({
                               <SelectValue placeholder="Don't import" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">Don't import</SelectItem>
+                              <SelectItem value="__skip__">Don't import</SelectItem>
                               {/* Note: Field options would come from form fields prop */}
                             </SelectContent>
                           </Select>

@@ -1,0 +1,290 @@
+{
+  "superadmin": {
+    "name": "Super Admin",
+    "email": "admin@datasaas.com",
+    "password": "Admin@123456",
+    "role": "superadmin",
+    "description": "System administrator with full access"
+  },
+  "companies": [
+    {
+      "name": "TechCorp Solutions",
+      "owner": {
+        "name": "John Doe",
+        "email": "john@techcorp.com",
+        "password": "John@123456",
+        "role": "owner",
+        "jobTitle": "CEO"
+      },
+      "companyDetails": {
+        "companyName": "TechCorp Solutions",
+        "industry": "Technology",
+        "size": "11-50",
+        "website": "https://techcorp.com",
+        "phone": "+1-555-0100",
+        "email": "info@techcorp.com",
+        "description": "A leading technology solutions provider specializing in enterprise software and cloud services",
+        "address": {
+          "street": "123 Tech Street",
+          "city": "San Francisco",
+          "state": "California",
+          "country": "United States",
+          "zipCode": "94102"
+        },
+        "taxId": "12-3456789"
+      },
+      "teamMembers": [
+        {
+          "name": "Alice Smith",
+          "email": "alice@techcorp.com",
+          "password": "Alice@123456",
+          "role": "admin",
+          "jobTitle": "Operations Manager",
+          "description": "Can manage team, forms, and data"
+        },
+        {
+          "name": "Bob Williams",
+          "email": "bob@techcorp.com",
+          "password": "Bob@123456",
+          "role": "editor",
+          "jobTitle": "Data Analyst",
+          "description": "Can create and edit forms and submissions"
+        },
+        {
+          "name": "Charlie Brown",
+          "email": "charlie@techcorp.com",
+          "password": "Charlie@123456",
+          "role": "viewer",
+          "jobTitle": "Intern",
+          "description": "Read-only access to forms and data"
+        }
+      ]
+    },
+    {
+      "name": "DataHub Analytics",
+      "owner": {
+        "name": "Sarah Johnson",
+        "email": "sarah@datahub.io",
+        "password": "Sarah@123456",
+        "role": "owner",
+        "jobTitle": "Founder & CEO"
+      },
+      "companyDetails": {
+        "companyName": "DataHub Analytics",
+        "industry": "Data Analytics",
+        "size": "51-200",
+        "website": "https://datahub.io",
+        "phone": "+1-555-0200",
+        "email": "info@datahub.io",
+        "description": "Data analytics and business intelligence solutions for modern enterprises",
+        "address": {
+          "street": "456 Data Avenue",
+          "city": "New York",
+          "state": "New York",
+          "country": "United States",
+          "zipCode": "10001"
+        },
+        "taxId": "98-7654321"
+      },
+      "teamMembers": [
+        {
+          "name": "David Lee",
+          "email": "david@datahub.io",
+          "password": "David@123456",
+          "role": "admin",
+          "jobTitle": "CTO",
+          "description": "Technical lead and admin"
+        },
+        {
+          "name": "Emma Wilson",
+          "email": "emma@datahub.io",
+          "password": "Emma@123456",
+          "role": "editor",
+          "jobTitle": "Data Scientist",
+          "description": "Works with data and forms"
+        }
+      ]
+    }
+  ],
+  "testSubmissions": {
+    "employeeOnboarding": [
+      {
+        "fullName": "Alex Thompson",
+        "workEmail": "alex.t@example.com",
+        "phoneNumber": "+1-555-0201",
+        "linkedInProfile": "https://linkedin.com/in/alexthompson",
+        "yearsOfExperience": 4,
+        "expectedSalary": 78000,
+        "startDate": "2025-03-01",
+        "interviewScheduled": "2025-02-15T14:00:00Z",
+        "preferredContactTime": "14:00",
+        "department": "Engineering",
+        "employmentType": "Full-time",
+        "agreeToTerms": true,
+        "skills": ["JavaScript", "Python", "React"],
+        "rating": 5,
+        "technicalProficiency": 7
+      },
+      {
+        "fullName": "Jessica Martinez",
+        "workEmail": "jessica.m@example.com",
+        "phoneNumber": "+1-555-0202",
+        "linkedInProfile": "https://linkedin.com/in/jessicamartinez",
+        "yearsOfExperience": 6,
+        "expectedSalary": 92000,
+        "startDate": "2025-03-15",
+        "department": "Marketing",
+        "employmentType": "Full-time",
+        "agreeToTerms": true,
+        "skills": ["Python", "Java"],
+        "rating": 4,
+        "technicalProficiency": 8
+      },
+      {
+        "fullName": "Christopher Davis",
+        "workEmail": "chris.d@example.com",
+        "phoneNumber": "+1-555-0203",
+        "yearsOfExperience": 2,
+        "expectedSalary": 65000,
+        "startDate": "2025-04-01",
+        "department": "Sales",
+        "employmentType": "Part-time",
+        "agreeToTerms": true,
+        "skills": ["JavaScript"],
+        "rating": 5,
+        "technicalProficiency": 6
+      },
+      {
+        "fullName": "Michelle Rodriguez",
+        "workEmail": "michelle.r@example.com",
+        "phoneNumber": "+1-555-0204",
+        "linkedInProfile": "https://linkedin.com/in/michellerodriguez",
+        "yearsOfExperience": 8,
+        "expectedSalary": 105000,
+        "startDate": "2025-04-15",
+        "interviewScheduled": "2025-04-01T10:00:00Z",
+        "preferredContactTime": "10:00",
+        "department": "Engineering",
+        "employmentType": "Full-time",
+        "agreeToTerms": true,
+        "skills": ["React", "Node.js", "Java"],
+        "rating": 5,
+        "technicalProficiency": 9
+      },
+      {
+        "fullName": "Daniel Anderson",
+        "workEmail": "daniel.a@example.com",
+        "phoneNumber": "+1-555-0205",
+        "yearsOfExperience": 1,
+        "expectedSalary": 58000,
+        "startDate": "2025-05-01",
+        "department": "HR",
+        "employmentType": "Full-time",
+        "agreeToTerms": true,
+        "skills": ["Python"],
+        "rating": 4,
+        "technicalProficiency": 5
+      }
+    ]
+  },
+  "formExamples": {
+    "employeeOnboarding": {
+      "name": "Employee Onboarding Form",
+      "description": "Comprehensive form for new employee onboarding",
+      "fields": [
+        {"type": "section_header", "label": "Personal Information"},
+        {"type": "short_text", "label": "Full Name", "required": true},
+        {"type": "email", "label": "Work Email", "required": true},
+        {"type": "phone", "label": "Phone Number", "required": false},
+        {"type": "url", "label": "LinkedIn Profile", "required": false},
+        {"type": "long_text", "label": "About Yourself", "required": false, "maxLength": 500},
+        {"type": "divider"},
+        {"type": "section_header", "label": "Professional Details"},
+        {"type": "number", "label": "Years of Experience", "required": true, "min": 0, "max": 50},
+        {"type": "currency", "label": "Expected Salary", "required": true, "min": 30000},
+        {"type": "dropdown", "label": "Department", "required": true, "options": ["Engineering", "Sales", "Marketing", "HR"]},
+        {"type": "radio", "label": "Employment Type", "required": true, "options": ["Full-time", "Part-time", "Contract"]},
+        {"type": "multi_select", "label": "Skills", "required": false, "options": ["JavaScript", "Python", "Java", "React", "Node.js"]},
+        {"type": "divider"},
+        {"type": "section_header", "label": "Schedule & Availability"},
+        {"type": "date", "label": "Start Date", "required": true},
+        {"type": "datetime", "label": "Interview Scheduled", "required": false},
+        {"type": "time", "label": "Preferred Contact Time", "required": false},
+        {"type": "divider"},
+        {"type": "section_header", "label": "Feedback"},
+        {"type": "rating", "label": "Rate our hiring process", "required": false, "maxRating": 5},
+        {"type": "scale", "label": "Technical proficiency", "required": false, "minValue": 1, "maxValue": 10},
+        {"type": "divider"},
+        {"type": "section_header", "label": "Agreement"},
+        {"type": "checkbox", "label": "Agree to Terms", "required": true}
+      ]
+    },
+    "customerFeedback": {
+      "name": "Customer Feedback Survey",
+      "description": "Quick customer satisfaction survey",
+      "fields": [
+        {"type": "short_text", "label": "Customer Name", "required": true},
+        {"type": "email", "label": "Email Address", "required": true},
+        {"type": "rating", "label": "Overall Satisfaction", "required": true, "maxRating": 5},
+        {"type": "dropdown", "label": "Service Used", "required": true, "options": ["Web Development", "Mobile App", "Consulting", "Support"]},
+        {"type": "long_text", "label": "Comments", "required": false, "maxLength": 1000},
+        {"type": "checkbox", "label": "Would recommend to others", "required": false}
+      ]
+    },
+    "eventRegistration": {
+      "name": "Event Registration Form",
+      "description": "Register for our upcoming tech conference",
+      "fields": [
+        {"type": "short_text", "label": "Full Name", "required": true},
+        {"type": "email", "label": "Email", "required": true},
+        {"type": "phone", "label": "Phone Number", "required": true},
+        {"type": "dropdown", "label": "Ticket Type", "required": true, "options": ["Early Bird", "Regular", "VIP"]},
+        {"type": "multi_select", "label": "Sessions Interested In", "required": false, "options": ["AI/ML", "Cloud Computing", "DevOps", "Security", "Frontend"]},
+        {"type": "radio", "label": "Dietary Preference", "required": false, "options": ["None", "Vegetarian", "Vegan", "Gluten-Free"]},
+        {"type": "checkbox", "label": "Agree to event terms", "required": true}
+      ]
+    }
+  },
+  "testScenarios": {
+    "scenario1": {
+      "name": "Basic Registration to Data Collection",
+      "steps": [
+        "Register TechCorp company (john@techcorp.com)",
+        "Superadmin approves TechCorp",
+        "John invites Alice (admin), Bob (editor), Charlie (viewer)",
+        "All team members accept invitations",
+        "John creates Employee Onboarding Form",
+        "Submit 5 test submissions (public form)",
+        "Import 10 more submissions via CSV",
+        "View data collection as different roles",
+        "Export data in all formats",
+        "Test role restrictions"
+      ]
+    },
+    "scenario2": {
+      "name": "Form Security Testing",
+      "steps": [
+        "Create password-protected form",
+        "Test with correct password (should work)",
+        "Test with wrong password (should fail)",
+        "Create domain-restricted form",
+        "Test submission from allowed domain",
+        "Test submission from blocked domain",
+        "Create form with expiry date",
+        "Test before expiry (should work)",
+        "Test after expiry (should fail)"
+      ]
+    },
+    "scenario3": {
+      "name": "Multi-Company Isolation",
+      "steps": [
+        "Register two companies (TechCorp & DataHub)",
+        "Create forms in both companies",
+        "Submit data in both companies",
+        "Login to TechCorp, try to access DataHub form (should fail)",
+        "Login to DataHub, try to access TechCorp data (should fail)",
+        "Verify no cross-company data leakage"
+      ]
+    }
+  }
+}
