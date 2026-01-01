@@ -12,8 +12,18 @@ interface FormThemePanelProps {
 }
 
 export function FormThemePanel({ theme, onUpdate }: FormThemePanelProps) {
+    // Provide default values if theme is null/undefined
+    const safeTheme: FormTheme = theme || {
+        primaryColor: "#1e293b",
+        backgroundColor: "#ffffff",
+        fontFamily: "Inter",
+        fontSize: "16px",
+        buttonStyle: "rounded",
+        showProgressBar: true,
+    };
+
     function updateTheme(updates: Partial<FormTheme>) {
-        onUpdate({ ...theme, ...updates });
+        onUpdate({ ...safeTheme, ...updates });
     }
 
     return (
@@ -39,13 +49,13 @@ export function FormThemePanel({ theme, onUpdate }: FormThemePanelProps) {
                                 <Input
                                     id="primaryColor"
                                     type="color"
-                                    value={theme.primaryColor}
+                                    value={safeTheme.primaryColor}
                                     onChange={(e) => updateTheme({ primaryColor: e.target.value })}
                                     className="w-16 h-10"
                                 />
                                 <Input
                                     type="text"
-                                    value={theme.primaryColor}
+                                    value={safeTheme.primaryColor}
                                     onChange={(e) => updateTheme({ primaryColor: e.target.value })}
                                     placeholder="#1e293b"
                                 />
@@ -58,7 +68,7 @@ export function FormThemePanel({ theme, onUpdate }: FormThemePanelProps) {
                                 <Input
                                     id="backgroundColor"
                                     type="color"
-                                    value={theme.backgroundColor}
+                                    value={safeTheme.backgroundColor}
                                     onChange={(e) =>
                                         updateTheme({ backgroundColor: e.target.value })
                                     }
@@ -66,7 +76,7 @@ export function FormThemePanel({ theme, onUpdate }: FormThemePanelProps) {
                                 />
                                 <Input
                                     type="text"
-                                    value={theme.backgroundColor}
+                                    value={safeTheme.backgroundColor}
                                     onChange={(e) =>
                                         updateTheme({ backgroundColor: e.target.value })
                                     }
@@ -89,7 +99,7 @@ export function FormThemePanel({ theme, onUpdate }: FormThemePanelProps) {
                         <Label htmlFor="fontFamily">Font Family</Label>
                         <select
                             id="fontFamily"
-                            value={theme.fontFamily}
+                            value={safeTheme.fontFamily}
                             onChange={(e) => updateTheme({ fontFamily: e.target.value })}
                             className="w-full rounded-md border border-input bg-background px-3 py-2"
                         >
@@ -106,7 +116,7 @@ export function FormThemePanel({ theme, onUpdate }: FormThemePanelProps) {
                         <Label htmlFor="fontSize">Font Size</Label>
                         <select
                             id="fontSize"
-                            value={theme.fontSize}
+                            value={safeTheme.fontSize}
                             onChange={(e) => updateTheme({ fontSize: e.target.value })}
                             className="w-full rounded-md border border-input bg-background px-3 py-2"
                         >
@@ -131,7 +141,7 @@ export function FormThemePanel({ theme, onUpdate }: FormThemePanelProps) {
                             <button
                                 key={style}
                                 onClick={() => updateTheme({ buttonStyle: style })}
-                                className={`p-4 border-2 rounded-lg transition-colors ${theme.buttonStyle === style
+                                className={`p-4 border-2 rounded-lg transition-colors ${safeTheme.buttonStyle === style
                                         ? "border-primary bg-primary/5"
                                         : "border-border hover:border-primary/50"
                                     }`}
@@ -167,7 +177,7 @@ export function FormThemePanel({ theme, onUpdate }: FormThemePanelProps) {
                             </p>
                         </div>
                         <Switch
-                            checked={theme.showProgressBar}
+                            checked={safeTheme.showProgressBar}
                             onCheckedChange={(checked) =>
                                 updateTheme({ showProgressBar: checked })
                             }
@@ -185,11 +195,11 @@ export function FormThemePanel({ theme, onUpdate }: FormThemePanelProps) {
                 <CardContent>
                     <div
                         className="p-8 rounded-lg"
-                        style={{ backgroundColor: theme.backgroundColor }}
+                        style={{ backgroundColor: safeTheme.backgroundColor }}
                     >
                         <h3
                             className="text-2xl font-bold mb-4"
-                            style={{ color: theme.primaryColor, fontFamily: theme.fontFamily }}
+                            style={{ color: safeTheme.primaryColor, fontFamily: safeTheme.fontFamily }}
                         >
                             Sample Form Title
                         </h3>
@@ -197,7 +207,7 @@ export function FormThemePanel({ theme, onUpdate }: FormThemePanelProps) {
                             <div>
                                 <label
                                     className="block text-sm font-medium mb-2"
-                                    style={{ fontFamily: theme.fontFamily, fontSize: theme.fontSize }}
+                                    style={{ fontFamily: safeTheme.fontFamily, fontSize: safeTheme.fontSize }}
                                 >
                                     Sample Question
                                 </label>
@@ -206,22 +216,22 @@ export function FormThemePanel({ theme, onUpdate }: FormThemePanelProps) {
                                     placeholder="Type your answer..."
                                     className="w-full px-4 py-2 border rounded-md"
                                     style={{
-                                        fontFamily: theme.fontFamily,
-                                        fontSize: theme.fontSize,
+                                        fontFamily: safeTheme.fontFamily,
+                                        fontSize: safeTheme.fontSize,
                                     }}
                                     disabled
                                 />
                             </div>
                             <button
-                                className={`px-6 py-2 text-white font-medium ${theme.buttonStyle === "rounded"
+                                className={`px-6 py-2 text-white font-medium ${safeTheme.buttonStyle === "rounded"
                                         ? "rounded-md"
-                                        : theme.buttonStyle === "pill"
+                                        : safeTheme.buttonStyle === "pill"
                                             ? "rounded-full"
                                             : ""
                                     }`}
                                 style={{
-                                    backgroundColor: theme.primaryColor,
-                                    fontFamily: theme.fontFamily,
+                                    backgroundColor: safeTheme.primaryColor,
+                                    fontFamily: safeTheme.fontFamily,
                                 }}
                                 disabled
                             >

@@ -56,7 +56,7 @@ export default async function PublicFormPage({ params }: PublicFormPageProps) {
     const userContext = await getCurrentUserContext();
 
     const isPublicForm =
-        form.accessControl.visibility === "public" || form.settings.isPublic;
+        form.accessControl?.visibility === "public" || form.settings.isPublic;
 
     if (!isPublicForm) {
         if (!userContext) {
@@ -152,7 +152,7 @@ export default async function PublicFormPage({ params }: PublicFormPageProps) {
     }
 
     if (
-        form.accessControl.maxSubmissions &&
+        form.accessControl?.maxSubmissions &&
         form.metadata.responseCount >= form.accessControl.maxSubmissions
     ) {
         return (
@@ -176,7 +176,7 @@ export default async function PublicFormPage({ params }: PublicFormPageProps) {
     }
 
     if (
-        form.accessControl.expiresAt &&
+        form.accessControl?.expiresAt &&
         new Date(form.accessControl.expiresAt) < new Date()
     ) {
         return (

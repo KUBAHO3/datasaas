@@ -23,12 +23,18 @@ export function FormSettingsPanel({
     accessControl,
     onUpdate,
 }: FormSettingsPanelProps) {
+    // Provide default values if accessControl is null/undefined
+    const safeAccessControl: FormAccessControl = accessControl || {
+        visibility: "public",
+        allowedDomains: [],
+    };
+
     function updateSettings(updates: Partial<FormSettings>) {
-        onUpdate({ ...settings, ...updates }, accessControl);
+        onUpdate({ ...settings, ...updates }, safeAccessControl);
     }
 
     function updateAccessControl(updates: Partial<FormAccessControl>) {
-        onUpdate(settings, { ...accessControl, ...updates });
+        onUpdate(settings, { ...safeAccessControl, ...updates });
     }
 
     function handleVisibilityChange(visibility: "public" | "team" | "private") {
@@ -36,7 +42,7 @@ export function FormSettingsPanel({
 
         onUpdate(
             { ...settings, isPublic },
-            { ...accessControl, visibility }
+            { ...safeAccessControl, visibility }
         );
     }
 
@@ -59,7 +65,7 @@ export function FormSettingsPanel({
                         <Label htmlFor="visibility">Form Visibility</Label>
                         <select
                             id="visibility"
-                            value={accessControl.visibility}
+                            value={safeAccessControl.visibility}
                             onChange={(e) =>
                                 handleVisibilityChange(e.target.value as "public" | "team" | "private")
                             }
@@ -70,9 +76,9 @@ export function FormSettingsPanel({
                             <option value="public">Public - Anyone with link</option>
                         </select>
                         <p className="text-xs text-muted-foreground">
-                            {accessControl.visibility === "public" && "✓ Form is publicly accessible"}
-                            {accessControl.visibility === "team" && "✓ Only team members can access"}
-                            {accessControl.visibility === "private" && "✓ Most restricted access"}
+                            {safeAccessControl.visibility === "public" && "✓ Form is publicly accessible"}
+                            {safeAccessControl.visibility === "team" && "✓ Only team members can access"}
+                            {safeAccessControl.visibility === "private" && "✓ Most restricted access"}
                         </p>
                     </div>
 
@@ -105,13 +111,13 @@ export function FormSettingsPanel({
                         />
                     </div>
 
-                    {accessControl.visibility === "public" && (
+                    {safeAccessControl.visibility === "public" && (
                         <div className="space-y-2">
                             <Label htmlFor="maxSubmissions">Maximum Submissions (Optional)</Label>
                             <Input
                                 id="maxSubmissions"
                                 type="number"
-                                value={accessControl.maxSubmissions || ""}
+                                value={safeAccessControl.maxSubmissions || ""}
                                 onChange={(e) =>
                                     updateAccessControl({
                                         maxSubmissions: e.target.value ? parseInt(e.target.value) : undefined,
@@ -141,7 +147,7 @@ export function FormSettingsPanel({
                             </p>
                         </div>
                         <Switch
-                            checked={!!accessControl.expiresAt}
+                            checked={!!safeAccessControl.expiresAt}
                             onCheckedChange={(checked) => {
                                 if (checked) {
                                     // Set default expiry to 30 days from now
@@ -157,7 +163,7 @@ export function FormSettingsPanel({
                         />
                     </div>
 
-                    {accessControl.expiresAt && (
+                    {safeAccessControl.expiresAt && (
                         <>
                             <div className="space-y-2">
                                 <Label htmlFor="expiresAt">Expiry Date & Time</Label>
@@ -165,8 +171,8 @@ export function FormSettingsPanel({
                                     id="expiresAt"
                                     type="datetime-local"
                                     value={
-                                        accessControl.expiresAt
-                                            ? new Date(accessControl.expiresAt)
+                                        safeAccessControl.expiresAt
+                                            ? new Date(safeAccessControl.expiresAt)
                                                   .toISOString()
                                                   .slice(0, 16)
                                             : ""
@@ -185,7 +191,7 @@ export function FormSettingsPanel({
                             </div>
 
                             {(() => {
-                                const expiryDate = new Date(accessControl.expiresAt);
+                                const expiryDate = new Date(safeAccessControl.expiresAt!);
                                 const now = new Date();
                                 const isExpired = expiryDate < now;
 

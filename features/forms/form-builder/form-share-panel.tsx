@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Form } from "@/lib/types/form-types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { APP_URL } from "@/lib/env-config";
+import { QRCodeDialog } from "@/components/forms/qr-code-dialog";
+import { EmailFormDialog } from "@/components/forms/email-form-dialog";
 
 interface FormSharePanelProps {
     form: Form;
@@ -28,8 +30,15 @@ interface FormSharePanelProps {
 
 export function FormSharePanel({ form, orgId }: FormSharePanelProps) {
     const [copied, setCopied] = useState(false);
+    const [showQRCode, setShowQRCode] = useState(false);
+    const [showEmailDialog, setShowEmailDialog] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
 
     const formUrl = `${APP_URL}/forms/${form.$id}`;
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     function copyToClipboard(text: string) {
         navigator.clipboard.writeText(text);
@@ -41,6 +50,9 @@ export function FormSharePanel({ form, orgId }: FormSharePanelProps) {
     const isPublished = form.status === "published";
     const isDraft = form.status === "draft";
     const isArchived = form.status === "archived";
+
+    // Default to "public" if accessControl is not defined
+    const visibility = form.accessControl?.visibility || "public";
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
@@ -91,12 +103,12 @@ export function FormSharePanel({ form, orgId }: FormSharePanelProps) {
 
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            {form.accessControl.visibility === "public" ? (
+                            {visibility === "public" ? (
                                 <>
                                     <Globe className="h-4 w-4 text-green-600" />
                                     <span className="text-sm font-medium">Public - Anyone with link</span>
                                 </>
-                            ) : form.accessControl.visibility === "team" ? (
+                            ) : visibility === "team" ? (
                                 <>
                                     <Users className="h-4 w-4 text-blue-600" />
                                     <span className="text-sm font-medium">Team - Company members only</span>
@@ -142,19 +154,21 @@ export function FormSharePanel({ form, orgId }: FormSharePanelProps) {
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-2">
-                            <Button variant="outline" className="w-full" disabled>
+                            <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => setShowEmailDialog(true)}
+                            >
                                 <Mail className="mr-2 h-4 w-4" />
                                 Email Link
-                                <Badge variant="secondary" className="ml-2 text-xs">
-                                    Coming Soon
-                                </Badge>
                             </Button>
-                            <Button variant="outline" className="w-full" disabled>
+                            <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => setShowQRCode(true)}
+                            >
                                 <QrCode className="mr-2 h-4 w-4" />
                                 Generate QR Code
-                                <Badge variant="secondary" className="ml-2 text-xs">
-                                    Coming Soon
-                                </Badge>
                             </Button>
                         </div>
                     </CardContent>
@@ -250,6 +264,26 @@ export function FormSharePanel({ form, orgId }: FormSharePanelProps) {
                     </p>
                 </CardContent>
             </Card>
+
+            {/* QR Code Dialog - Only render on client */}
+            {isMounted && (
+                <>
+                    <QRCodeDialog
+                        open={showQRCode}
+                        onOpenChange={setShowQRCode}
+                        url={formUrl}
+                        formTitle={form.title}
+                    />
+
+                    {/* Email Dialog */}
+                    <EmailFormDialog
+                        open={showEmailDialog}
+                        onOpenChange={setShowEmailDialog}
+                        url={formUrl}
+                        formTitle={form.title}
+                    />
+                </>
+            )}
         </div>
     );
 }

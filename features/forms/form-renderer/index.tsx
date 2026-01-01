@@ -36,11 +36,16 @@ export function FormRenderer({ form, userContext }: FormRendererProps) {
         defaultValues: {},
     });
 
-    const totalSteps = form.steps.length;
+    // Handle missing or empty steps by providing a default single step
+    const formSteps = form.steps && form.steps.length > 0
+        ? form.steps
+        : [{ id: 'default', title: '', description: '', fields: [], order: 0 }];
+
+    const totalSteps = formSteps.length;
     const progress = ((currentStep + 1) / totalSteps) * 100;
 
     const currentStepFields = (() => {
-        const stepFieldIds = form.steps[currentStep]?.fields || [];
+        const stepFieldIds = formSteps[currentStep]?.fields || [];
 
         if (stepFieldIds.length > 0) {
             return form.fields
@@ -48,7 +53,7 @@ export function FormRenderer({ form, userContext }: FormRendererProps) {
                 .sort((a, b) => a.order - b.order);
         }
 
-        const allAssignedFieldIds = form.steps.flatMap((step) => step.fields || []);
+        const allAssignedFieldIds = formSteps.flatMap((step) => step.fields || []);
 
         if (allAssignedFieldIds.length === 0 && currentStep === 0) {
             return form.fields.sort((a, b) => a.order - b.order);
@@ -244,14 +249,14 @@ export function FormRenderer({ form, userContext }: FormRendererProps) {
 
                     <CardContent className="space-y-6">
                         {/* Current Step Title */}
-                        {form.steps[currentStep]?.title && totalSteps > 1 && (
+                        {formSteps[currentStep]?.title && totalSteps > 1 && (
                             <div>
                                 <h3 className="text-xl font-semibold">
-                                    {form.steps[currentStep].title}
+                                    {formSteps[currentStep].title}
                                 </h3>
-                                {form.steps[currentStep].description && (
+                                {formSteps[currentStep].description && (
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        {form.steps[currentStep].description}
+                                        {formSteps[currentStep].description}
                                     </p>
                                 )}
                             </div>

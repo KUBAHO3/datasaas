@@ -38,6 +38,67 @@ export const FormHelpers = {
       console.error("Error parsing form JSON fields:", error);
     }
 
+    // Provide default values for missing properties (backwards compatibility)
+    if (!form.accessControl) {
+      form.accessControl = {
+        visibility: "public",
+      };
+    }
+
+    if (!form.settings) {
+      form.settings = {
+        isPublic: false,
+        allowAnonymous: false,
+        requireLogin: true,
+        allowEdit: false,
+        allowMultipleSubmissions: false,
+        showProgressBar: true,
+        showQuestionNumbers: true,
+        shuffleQuestions: false,
+        confirmationMessage: "Thank you for your submission!",
+        enableNotifications: false,
+        notificationEmails: [],
+        enableAutoSave: true,
+        autoSaveInterval: 30,
+        collectEmail: true,
+        collectIpAddress: false,
+        enableRecaptcha: false,
+      };
+    }
+
+    // Provide default steps if missing or null
+    if (!form.steps || !Array.isArray(form.steps) || form.steps.length === 0) {
+      form.steps = [
+        {
+          id: "step-1",
+          title: "",
+          description: "",
+          fields: [],
+          order: 1,
+        },
+      ];
+    }
+
+    if (!form.metadata) {
+      form.metadata = {
+        totalFields: form.fields?.length || 0,
+        totalSteps: form.steps?.length || 1,
+        estimatedTime: 5,
+        responseCount: 0,
+      };
+    }
+
+    if (!form.theme) {
+      form.theme = {
+        primaryColor: "#1e293b",
+        backgroundColor: "#ffffff",
+        fontFamily: "Inter",
+        fontSize: "16px",
+        buttonStyle: "rounded",
+        showProgressBar: true,
+      };
+    }
+
     return form as Form;
   },
 };
