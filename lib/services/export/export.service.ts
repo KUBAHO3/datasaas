@@ -7,8 +7,7 @@ import {
   sanitizeColumnName,
 } from "@/lib/utils/submission-utils";
 import * as XLSX from "xlsx";
-import PDFDocument from "pdfkit";
-import { Readable } from "stream";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
 interface ExportParams {
   format: "excel" | "csv" | "json" | "pdf";
@@ -220,7 +219,7 @@ export class ExportService {
   }
 
   /**
-   * Export to PDF using pdfkit
+   * Export to PDF using pdf-lib
    */
   private async exportToPDF(
     form: Form,
@@ -228,198 +227,224 @@ export class ExportService {
     fields: any[],
     includeMetadata?: boolean
   ): Promise<ExportResult> {
-    return new Promise((resolve, reject) => {
-      try {
-        const doc = new PDFDocument({
-          size: "A4",
-          layout: "landscape",
-          margin: 50,
+    try {
+      // Create a new PDF document
+      const pdfDoc = await PDFDocument.create();
+
+      // Embed fonts
+      const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      const normalFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+      // Page configuration
+      const pageWidth = 842; // A4 landscape width in points
+      const pageHeight = 595; // A4 landscape height in points
+      const margin = 50;
+      const contentWidth = pageWidth - 2 * margin;
+
+      // Create first page
+      let page = pdfDoc.addPage([pageWidth, pageHeight]);
+      let currentY = pageHeight - margin;
+
+      // Draw header
+      page.drawText(form.name, {
+        x: margin,
+        y: currentY,
+        size: 20,
+        font: boldFont,
+        color: rgb(0, 0, 0),
+      });
+      currentY -= 30;
+
+      page.drawText("Submissions Report", {
+        x: margin,
+        y: currentY,
+        size: 12,
+        font: normalFont,
+        color: rgb(0, 0, 0),
+      });
+      currentY -= 15;
+
+      page.drawText(`Generated on: ${new Date().toLocaleString()}`, {
+        x: margin,
+        y: currentY,
+        size: 10,
+        font: normalFont,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+      currentY -= 15;
+
+      page.drawText(`Total Submissions: ${rows.length}`, {
+        x: margin,
+        y: currentY,
+        size: 10,
+        font: normalFont,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+      currentY -= 30;
+
+      // Table headers
+      const headers = ["ID", "Status", "Submitted At", "Submitted By"];
+      fields.forEach((field) => {
+        headers.push(field.label.substring(0, 15)); // Truncate long labels
+      });
+      if (includeMetadata) {
+        headers.push("Started", "Last Saved");
+      }
+
+      const columnWidth = contentWidth / headers.length;
+      const rowHeight = 18;
+      const headerHeight = 25;
+
+      // Draw header row
+      page.drawRectangle({
+        x: margin,
+        y: currentY - headerHeight,
+        width: contentWidth,
+        height: headerHeight,
+        color: rgb(0.9, 0.9, 0.9),
+      });
+
+      headers.forEach((header, i) => {
+        const text = header.length > 12 ? header.substring(0, 12) + "..." : header;
+        page.drawText(text, {
+          x: margin + i * columnWidth + 5,
+          y: currentY - 17,
+          size: 8,
+          font: boldFont,
+          color: rgb(0, 0, 0),
         });
+      });
 
-        const chunks: Buffer[] = [];
+      currentY -= headerHeight + 5;
 
-        doc.on("data", (chunk) => chunks.push(chunk));
-        doc.on("end", () => {
-          const pdfBuffer = Buffer.concat(chunks);
-          const base64 = pdfBuffer.toString("base64");
+      // Draw horizontal line under headers
+      page.drawLine({
+        start: { x: margin, y: currentY },
+        end: { x: pageWidth - margin, y: currentY },
+        thickness: 1,
+        color: rgb(0, 0, 0),
+      });
 
-          resolve({
-            data: base64,
-            filename: `${sanitizeColumnName(form.name)}_submissions_${
-              new Date().toISOString().split("T")[0]
-            }.pdf`,
-            mimeType: "application/pdf",
+      currentY -= 5;
+
+      // Draw table rows
+      rows.forEach((row, rowIndex) => {
+        // Check if we need a new page
+        if (currentY < margin + 50) {
+          page = pdfDoc.addPage([pageWidth, pageHeight]);
+          currentY = pageHeight - margin;
+
+          // Redraw headers on new page
+          page.drawRectangle({
+            x: margin,
+            y: currentY - headerHeight,
+            width: contentWidth,
+            height: headerHeight,
+            color: rgb(0.9, 0.9, 0.9),
           });
-        });
 
-        doc.on("error", reject);
+          headers.forEach((header, i) => {
+            const text = header.length > 12 ? header.substring(0, 12) + "..." : header;
+            page.drawText(text, {
+              x: margin + i * columnWidth + 5,
+              y: currentY - 17,
+              size: 8,
+              font: boldFont,
+              color: rgb(0, 0, 0),
+            });
+          });
 
-        // Header
-        doc.fontSize(20).font("Helvetica-Bold").text(form.name, {
-          align: "center",
-        });
+          currentY -= headerHeight + 5;
 
-        doc.moveDown(0.5);
-        doc
-          .fontSize(10)
-          .font("Helvetica")
-          .text(`Submissions Report`, { align: "center" });
-        doc.text(`Generated on: ${new Date().toLocaleString()}`, {
-          align: "center",
-        });
-        doc.text(`Total Submissions: ${rows.length}`, { align: "center" });
+          page.drawLine({
+            start: { x: margin, y: currentY },
+            end: { x: pageWidth - margin, y: currentY },
+            thickness: 1,
+            color: rgb(0, 0, 0),
+          });
 
-        doc.moveDown(1);
+          currentY -= 5;
+        }
 
-        // Table configuration
-        const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-        const headers = ["ID", "Status", "Submitted At", "Submitted By"];
+        // Prepare row data
+        const rowData: string[] = [
+          row.submission.$id.substring(0, 8) + "...",
+          row.submission.status,
+          row.submission.submittedAt
+            ? new Date(row.submission.submittedAt).toLocaleDateString()
+            : "—",
+          (row.submission.submittedByEmail ||
+            row.submission.submittedBy ||
+            "Anon").substring(0, 12),
+        ];
 
         fields.forEach((field) => {
-          headers.push(field.label.substring(0, 20)); // Truncate long labels
+          const value = row.fieldValues[field.id];
+          const formatted = SubmissionHelpers.formatFieldValue(value, field.type);
+          const truncated = formatted.toString().substring(0, 20);
+          rowData.push(truncated);
         });
 
         if (includeMetadata) {
-          headers.push("Started", "Last Saved");
-        }
-
-        const columnWidth = pageWidth / headers.length;
-        const tableTop = doc.y;
-        let currentY = tableTop;
-
-        // Draw table headers
-        doc.fontSize(8).font("Helvetica-Bold");
-        headers.forEach((header, i) => {
-          doc.text(
-            header,
-            doc.page.margins.left + i * columnWidth,
-            currentY,
-            {
-              width: columnWidth - 5,
-              align: "left",
-            }
+          rowData.push(
+            new Date(row.submission.startedAt).toLocaleDateString(),
+            new Date(row.submission.lastSavedAt).toLocaleDateString()
           );
-        });
-
-        currentY += 20;
-        doc
-          .moveTo(doc.page.margins.left, currentY)
-          .lineTo(doc.page.width - doc.page.margins.right, currentY)
-          .stroke();
-
-        currentY += 5;
-
-        // Draw table rows
-        doc.font("Helvetica").fontSize(7);
-
-        rows.forEach((row, rowIndex) => {
-          // Check if we need a new page
-          if (currentY > doc.page.height - doc.page.margins.bottom - 50) {
-            doc.addPage({ size: "A4", layout: "landscape", margin: 50 });
-            currentY = doc.page.margins.top;
-
-            // Redraw headers on new page
-            doc.fontSize(8).font("Helvetica-Bold");
-            headers.forEach((header, i) => {
-              doc.text(
-                header,
-                doc.page.margins.left + i * columnWidth,
-                currentY,
-                {
-                  width: columnWidth - 5,
-                  align: "left",
-                }
-              );
-            });
-            currentY += 20;
-            doc
-              .moveTo(doc.page.margins.left, currentY)
-              .lineTo(doc.page.width - doc.page.margins.right, currentY)
-              .stroke();
-            currentY += 5;
-            doc.font("Helvetica").fontSize(7);
-          }
-
-          const rowData: string[] = [
-            row.submission.$id.substring(0, 8) + "...",
-            row.submission.status,
-            row.submission.submittedAt
-              ? new Date(row.submission.submittedAt).toLocaleDateString()
-              : "—",
-            (row.submission.submittedByEmail ||
-              row.submission.submittedBy ||
-              "Anon").substring(0, 15),
-          ];
-
-          fields.forEach((field) => {
-            const value = row.fieldValues[field.id];
-            const formatted = SubmissionHelpers.formatFieldValue(
-              value,
-              field.type
-            );
-            rowData.push(
-              formatted.toString().substring(0, 30) // Truncate long values
-            );
-          });
-
-          if (includeMetadata) {
-            rowData.push(
-              new Date(row.submission.startedAt).toLocaleDateString(),
-              new Date(row.submission.lastSavedAt).toLocaleDateString()
-            );
-          }
-
-          const rowHeight = 15;
-
-          // Alternate row background
-          if (rowIndex % 2 === 0) {
-            doc
-              .rect(
-                doc.page.margins.left,
-                currentY - 2,
-                pageWidth,
-                rowHeight
-              )
-              .fill("#f9f9f9");
-          }
-
-          doc.fillColor("#000000");
-
-          rowData.forEach((cell, i) => {
-            doc.text(
-              cell || "—",
-              doc.page.margins.left + i * columnWidth,
-              currentY,
-              {
-                width: columnWidth - 5,
-                height: rowHeight,
-                align: "left",
-                ellipsis: true,
-              }
-            );
-          });
-
-          currentY += rowHeight;
-        });
-
-        // Footer
-        const pageCount = (doc as any).bufferedPageRange().count;
-        for (let i = 0; i < pageCount; i++) {
-          doc.switchToPage(i);
-          doc
-            .fontSize(8)
-            .text(
-              `Page ${i + 1} of ${pageCount}`,
-              doc.page.margins.left,
-              doc.page.height - doc.page.margins.bottom + 10,
-              { align: "center" }
-            );
         }
 
-        doc.end();
-      } catch (error) {
-        reject(error);
-      }
-    });
+        // Alternate row background
+        if (rowIndex % 2 === 0) {
+          page.drawRectangle({
+            x: margin,
+            y: currentY - rowHeight,
+            width: contentWidth,
+            height: rowHeight,
+            color: rgb(0.98, 0.98, 0.98),
+          });
+        }
+
+        // Draw cell text
+        rowData.forEach((cell, i) => {
+          const text = cell || "—";
+          const truncated = text.length > 15 ? text.substring(0, 15) + "..." : text;
+
+          page.drawText(truncated, {
+            x: margin + i * columnWidth + 5,
+            y: currentY - 12,
+            size: 7,
+            font: normalFont,
+            color: rgb(0, 0, 0),
+          });
+        });
+
+        currentY -= rowHeight;
+      });
+
+      // Add page numbers to all pages
+      const totalPages = pdfDoc.getPageCount();
+      pdfDoc.getPages().forEach((p, i) => {
+        p.drawText(`Page ${i + 1} of ${totalPages}`, {
+          x: pageWidth / 2 - 30,
+          y: 20,
+          size: 8,
+          font: normalFont,
+          color: rgb(0.5, 0.5, 0.5),
+        });
+      });
+
+      // Generate PDF bytes
+      const pdfBytes = await pdfDoc.save();
+      const base64 = Buffer.from(pdfBytes).toString("base64");
+
+      return {
+        data: base64,
+        filename: `${sanitizeColumnName(form.name)}_submissions_${
+          new Date().toISOString().split("T")[0]
+        }.pdf`,
+        mimeType: "application/pdf",
+      };
+    } catch (error) {
+      throw new Error(`PDF export failed: ${error}`);
+    }
   }
 }
