@@ -45,7 +45,6 @@ export default async function AnalyticsPage({
   const { orgId } = await params;
   const { formId } = await searchParams;
 
-  // Get company
   const companyModel = new CompanyAdminModel();
   const company = await companyModel.findById(orgId);
 
@@ -53,7 +52,6 @@ export default async function AnalyticsPage({
     redirect("/");
   }
 
-  // Get forms
   const formModel = new FormAdminModel();
   const forms = await formModel.findMany({
     where: [{ field: "companyId", operator: "equals", value: orgId }],

@@ -2,6 +2,7 @@
 
 import { cache } from "react";
 import { AdminTeamsService } from "../core/base-teams";
+import { RBAC_ROLES } from "@/lib/constants/rbac-roles";
 
 export const verifyTeamMembership = cache(
   async (userId: string, teamId: string): Promise<boolean> => {
@@ -30,16 +31,16 @@ export const getUserTeamRole = cache(
       );
 
       if (!userMembership) {
-        return "viewer";
+        return RBAC_ROLES.VIEWER;
       }
 
-      if (userMembership.roles.includes("owner")) return "owner";
-      if (userMembership.roles.includes("admin")) return "admin";
-      if (userMembership.roles.includes("editor")) return "editor";
-      return "viewer";
+      if (userMembership.roles.includes(RBAC_ROLES.OWNER)) return RBAC_ROLES.OWNER;
+      if (userMembership.roles.includes(RBAC_ROLES.ADMIN)) return RBAC_ROLES.ADMIN;
+      if (userMembership.roles.includes(RBAC_ROLES.EDITOR)) return RBAC_ROLES.EDITOR;
+      return RBAC_ROLES.VIEWER;
     } catch (error) {
       console.error("Get user team role error:", error);
-      return "viewer";
+      return RBAC_ROLES.VIEWER;
     }
   }
 );

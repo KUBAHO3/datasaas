@@ -8,6 +8,7 @@ import { UserDataAdminModel } from "../services/models/users.model";
 import { UserData } from "../types/user-types";
 import { redirect } from "next/navigation";
 import { checkCompanyAccess } from "./company-access";
+import { ROLE_ARRAYS } from "../constants/rbac-roles";
 
 export interface UserContext {
   userId: string;
@@ -87,12 +88,10 @@ export async function requireCompany(): Promise<UserContext> {
     redirect("/onboarding");
   }
 
-  // Check if user is suspended
   if (!userContext.isSuperAdmin && userContext.userData?.suspended) {
     redirect("/suspended");
   }
 
-  // Check if company is suspended (super admins bypass this check)
   if (!userContext.isSuperAdmin) {
     const accessResult = await checkCompanyAccess(
       userContext.userId,
@@ -114,7 +113,6 @@ export async function requireCompanyAccess(orgId: string) {
 
   if (!userContext.companyId) redirect("/onboarding");
 
-  // Check if user is suspended
   if (userContext.userData?.suspended) {
     redirect("/suspended");
   }
@@ -222,9 +220,9 @@ export async function validateDataScope(
     case "read":
       return true;
     case "write":
-      return ["owner", "admin", "editor"].includes(userContext.role || "");
+      return ROLE_ARRAYS.EDITOR_AND_ABOVE.includes(userContext.role as any);
     case "delete":
-      return ["owner", "admin"].includes(userContext.role || "");
+      return ROLE_ARRAYS.OWNER_AND_ADMIN.includes(userContext.role as any);
     default:
       return false;
   }

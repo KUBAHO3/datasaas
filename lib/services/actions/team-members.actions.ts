@@ -18,6 +18,7 @@ import { APP_URL } from "@/lib/env-config";
 import { revalidatePath } from "next/cache";
 import { ID } from "node-appwrite";
 import { TeamMemberRole } from "@/lib/types/user-types";
+import { getRoleArray, RBAC_ROLES } from "@/lib/constants/rbac-roles";
 
 async function enrichMemberships(memberships: any[], companyId: string) {
   const usersService = new AdminUsersService();
@@ -34,10 +35,10 @@ async function enrichMemberships(memberships: any[], companyId: string) {
           ? await userDataModel.findByUserId(membership.userId)
           : null;
 
-        let role: TeamMemberRole = "viewer";
-        if (membership.roles.includes("owner")) role = "owner";
-        else if (membership.roles.includes("admin")) role = "admin";
-        else if (membership.roles.includes("editor")) role = "editor";
+        let role: TeamMemberRole = RBAC_ROLES.VIEWER as TeamMemberRole;
+        if (membership.roles.includes(RBAC_ROLES.OWNER)) role = RBAC_ROLES.OWNER as TeamMemberRole;
+        else if (membership.roles.includes(RBAC_ROLES.ADMIN)) role = RBAC_ROLES.ADMIN as TeamMemberRole;
+        else if (membership.roles.includes(RBAC_ROLES.EDITOR)) role = RBAC_ROLES.EDITOR as TeamMemberRole;
 
         return {
           membershipId: membership.$id,
@@ -66,7 +67,7 @@ async function enrichMemberships(memberships: any[], companyId: string) {
   return enriched.filter((member): member is NonNullable<typeof member> => member !== null);
 }
 
-export const listTeamMembers = createRoleAction(["owner", "admin", "editor", "viewer"])
+export const listTeamMembers = createRoleAction(getRoleArray("ALL_ROLES"))
   .inputSchema(listTeamMembersSchema)
   .action(async ({ parsedInput, ctx }) => {
     const { companyId } = parsedInput;
@@ -120,7 +121,7 @@ export const listTeamMembers = createRoleAction(["owner", "admin", "editor", "vi
     };
   });
 
-export const inviteTeamMember = createRoleAction(["owner", "admin"])
+export const inviteTeamMember = createRoleAction(getRoleArray("OWNER_AND_ADMIN"))
   .inputSchema(inviteTeamMemberSchema)
   .action(async ({ parsedInput, ctx }) => {
     const { email, role, name, companyId } = parsedInput;
@@ -198,7 +199,7 @@ export const inviteTeamMember = createRoleAction(["owner", "admin"])
     };
   });
 
-export const updateMemberRole = createRoleAction(["owner", "admin"])
+export const updateMemberRole = createRoleAction(getRoleArray("OWNER_AND_ADMIN"))
   .inputSchema(updateMemberRoleSchema)
   .action(async ({ parsedInput, ctx }) => {
     const { membershipId, companyId, role } = parsedInput;
@@ -210,10 +211,10 @@ export const updateMemberRole = createRoleAction(["owner", "admin"])
     const teamsService = new AdminTeamsService();
     const membership = await teamsService.getMembership(companyId, membershipId);
 
-    if (membership.roles.includes("owner") && role !== "owner") {
+    if (membership.roles.includes(RBAC_ROLES.OWNER) && role !== RBAC_ROLES.OWNER) {
       const allMemberships = await teamsService.listMemberships(companyId);
       const ownerCount = allMemberships.memberships.filter((m) =>
-        m.roles.includes("owner")
+        m.roles.includes(RBAC_ROLES.OWNER)
       ).length;
 
       if (ownerCount <= 1) {
@@ -242,7 +243,7 @@ export const updateMemberRole = createRoleAction(["owner", "admin"])
     };
   });
 
-export const removeMember = createRoleAction(["owner", "admin"])
+export const removeMember = createRoleAction(getRoleArray("OWNER_AND_ADMIN"))
   .inputSchema(removeMemberSchema)
   .action(async ({ parsedInput, ctx }) => {
     const { membershipId, companyId, userId } = parsedInput;
@@ -255,13 +256,34 @@ export const removeMember = createRoleAction(["owner", "admin"])
       throw new Error("You cannot remove yourself from the team");
     }
 
+    // Check if this is a pending invitation (userId is "pending" or null)
+    const isPendingInvitation = !userId || userId === "pending";
+
+    if (isPendingInvitation) {
+      // For pending invitations, delete the invitation record
+      const { InvitationAdminModel } = await import("../models/invitation.model");
+      const invitationModel = new InvitationAdminModel();
+
+      await invitationModel.delete(membershipId);
+
+      revalidatePath(`/org/${companyId}/users`);
+      revalidatePath(`/org/${companyId}`);
+
+      return {
+        success: true,
+        message: "Invitation cancelled successfully",
+        data: { membershipId },
+      };
+    }
+
+    // For active members, delete the membership
     const teamsService = new AdminTeamsService();
     const membership = await teamsService.getMembership(companyId, membershipId);
 
-    if (membership.roles.includes("owner")) {
+    if (membership.roles.includes(RBAC_ROLES.OWNER)) {
       const allMemberships = await teamsService.listMemberships(companyId);
       const ownerCount = allMemberships.memberships.filter((m) =>
-        m.roles.includes("owner")
+        m.roles.includes(RBAC_ROLES.OWNER)
       ).length;
 
       if (ownerCount <= 1) {
@@ -281,7 +303,7 @@ export const removeMember = createRoleAction(["owner", "admin"])
     };
   });
 
-export const resendInvitation = createRoleAction(["owner", "admin"])
+export const resendInvitation = createRoleAction(getRoleArray("OWNER_AND_ADMIN"))
   .inputSchema(resendInvitationSchema)
   .action(async ({ parsedInput, ctx }) => {
     const { invitationId, companyId } = parsedInput;
@@ -346,7 +368,7 @@ export const resendInvitation = createRoleAction(["owner", "admin"])
     };
   });
 
-export const suspendMember = createRoleAction(["owner", "admin"])
+export const suspendMember = createRoleAction(getRoleArray("OWNER_AND_ADMIN"))
   .inputSchema(suspendMemberSchema)
   .action(async ({ parsedInput, ctx }) => {
     const { membershipId, companyId, userId, reason } = parsedInput;
@@ -362,10 +384,10 @@ export const suspendMember = createRoleAction(["owner", "admin"])
     const teamsService = new AdminTeamsService();
     const membership = await teamsService.getMembership(companyId, membershipId);
 
-    if (membership.roles.includes("owner")) {
+    if (membership.roles.includes(RBAC_ROLES.OWNER)) {
       const allMemberships = await teamsService.listMemberships(companyId);
       const activeOwnerCount = allMemberships.memberships.filter((m) =>
-        m.roles.includes("owner")
+        m.roles.includes(RBAC_ROLES.OWNER)
       ).length;
 
       if (activeOwnerCount <= 1) {
@@ -400,7 +422,7 @@ export const suspendMember = createRoleAction(["owner", "admin"])
     };
   });
 
-export const unsuspendMember = createRoleAction(["owner", "admin"])
+export const unsuspendMember = createRoleAction(getRoleArray("OWNER_AND_ADMIN"))
   .inputSchema(unsuspendMemberSchema)
   .action(async ({ parsedInput, ctx }) => {
     const { companyId, userId } = parsedInput;
@@ -460,7 +482,19 @@ export const acceptInvitation = action
     }
 
     const userId = ID.unique();
-    await adminUsersService.createUser(userId, invitation.email, password, name);
+
+    try {
+      await adminUsersService.createUser(userId, invitation.email, password, name);
+    } catch (error: any) {
+      // Handle Appwrite-specific errors
+      if (error?.type === 'user_already_exists' || error?.code === 409) {
+        throw new Error(
+          "A user with this email already exists. If you already have an account, please sign in instead of accepting this invitation."
+        );
+      }
+      // Re-throw other errors to be handled by the global error handler
+      throw error;
+    }
 
     await adminAccountService.createSession(invitation.email, password);
 

@@ -33,10 +33,16 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { inviteTeamMember } from "@/lib/services/actions/team-members.actions";
 import { Loader2, UserPlus } from "lucide-react";
+import { RBAC_ROLES, ROLE_DESCRIPTIONS } from "@/lib/constants/rbac-roles";
 
 const inviteFormSchema = z.object({
     email: z.string().email("Please enter a valid email address"),
-    role: z.enum(["owner", "admin", "editor", "viewer"]),
+    role: z.enum([
+        RBAC_ROLES.OWNER,
+        RBAC_ROLES.ADMIN,
+        RBAC_ROLES.EDITOR,
+        RBAC_ROLES.VIEWER,
+    ]),
     name: z.string().min(2, "Name must be at least 2 characters").optional().or(z.literal("")),
 });
 
@@ -59,7 +65,7 @@ function InviteMemberDialog({
         resolver: zodResolver(inviteFormSchema),
         defaultValues: {
             email: "",
-            role: "viewer",
+            role: RBAC_ROLES.VIEWER,
             name: "",
         },
     });
@@ -163,35 +169,43 @@ function InviteMemberDialog({
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            <SelectItem value="viewer">
+                                            <SelectItem value={RBAC_ROLES.VIEWER}>
                                                 <div className="flex flex-col items-start">
-                                                    <span className="font-medium">Viewer</span>
+                                                    <span className="font-medium">
+                                                        {ROLE_DESCRIPTIONS[RBAC_ROLES.VIEWER].label}
+                                                    </span>
                                                     <span className="text-xs text-muted-foreground">
-                                                        Can view data only
+                                                        {ROLE_DESCRIPTIONS[RBAC_ROLES.VIEWER].description}
                                                     </span>
                                                 </div>
                                             </SelectItem>
-                                            <SelectItem value="editor">
+                                            <SelectItem value={RBAC_ROLES.EDITOR}>
                                                 <div className="flex flex-col items-start">
-                                                    <span className="font-medium">Editor</span>
+                                                    <span className="font-medium">
+                                                        {ROLE_DESCRIPTIONS[RBAC_ROLES.EDITOR].label}
+                                                    </span>
                                                     <span className="text-xs text-muted-foreground">
-                                                        Can create and edit data
+                                                        {ROLE_DESCRIPTIONS[RBAC_ROLES.EDITOR].description}
                                                     </span>
                                                 </div>
                                             </SelectItem>
-                                            <SelectItem value="admin">
+                                            <SelectItem value={RBAC_ROLES.ADMIN}>
                                                 <div className="flex flex-col items-start">
-                                                    <span className="font-medium">Admin</span>
+                                                    <span className="font-medium">
+                                                        {ROLE_DESCRIPTIONS[RBAC_ROLES.ADMIN].label}
+                                                    </span>
                                                     <span className="text-xs text-muted-foreground">
-                                                        Can manage users, forms, and data
+                                                        {ROLE_DESCRIPTIONS[RBAC_ROLES.ADMIN].description}
                                                     </span>
                                                 </div>
                                             </SelectItem>
-                                            <SelectItem value="owner">
+                                            <SelectItem value={RBAC_ROLES.OWNER}>
                                                 <div className="flex flex-col items-start">
-                                                    <span className="font-medium">Owner</span>
+                                                    <span className="font-medium">
+                                                        {ROLE_DESCRIPTIONS[RBAC_ROLES.OWNER].label}
+                                                    </span>
                                                     <span className="text-xs text-muted-foreground">
-                                                        Full control over the organization
+                                                        {ROLE_DESCRIPTIONS[RBAC_ROLES.OWNER].description}
                                                     </span>
                                                 </div>
                                             </SelectItem>

@@ -24,18 +24,7 @@ export class AuditLogger {
         ...input,
       };
 
-      // TODO: Replace with actual database write
       console.log("[AUDIT LOG]", JSON.stringify(logEntry, null, 2));
-
-      // Example implementation when AuditLog collection is created:
-      // const auditLogModel = new AuditLogAdminModel();
-      // await auditLogModel.create({
-      //   ...input,
-      //   permissions: [
-      //     Permission.read(Role.team(input.companyId, "owner")),
-      //     Permission.read(Role.team(input.companyId, "admin")),
-      //   ],
-      // });
     } catch (error) {
       // Don't throw - audit logging failures shouldn't break the application
       console.error("[AUDIT LOG ERROR]", error);

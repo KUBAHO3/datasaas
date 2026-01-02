@@ -22,7 +22,6 @@ export function canAcceptSubmissions(
     form: Form,
     currentSubmissionCount?: number
 ): { canAccept: boolean; reason?: string } {
-    // Check if form is published
     if (form.status !== "published") {
         return {
             canAccept: false,
@@ -30,7 +29,6 @@ export function canAcceptSubmissions(
         };
     }
 
-    // Check if form has expired
     if (isFormExpired(form)) {
         const expiryDate = new Date(form.accessControl.expiresAt!);
         return {
@@ -39,7 +37,6 @@ export function canAcceptSubmissions(
         };
     }
 
-    // Check if max submissions limit has been reached
     if (
         form.accessControl.maxSubmissions !== undefined &&
         currentSubmissionCount !== undefined &&
@@ -51,7 +48,6 @@ export function canAcceptSubmissions(
         };
     }
 
-    // Form can accept submissions
     return { canAccept: true };
 }
 

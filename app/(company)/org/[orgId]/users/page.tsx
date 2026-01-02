@@ -49,14 +49,85 @@ function LoadingSkeleton() {
 }
 
 async function UsersContent({ orgId }: { orgId: string }) {
-    const userContext = await requireAuth();
+    let userContext;
+    let result;
 
-    // Check if user has access to this org (owner, admin, editor, or viewer)
-    // For now, we'll fetch the members which will validate access
-    const result = await listTeamMembers({ companyId: orgId });
+    try {
+        userContext = await requireAuth();
+    } catch (error) {
+        return (
+            <div className="flex-1 space-y-6 p-6">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Team Members</h1>
+                    <p className="text-muted-foreground">
+                        Manage your team members and their roles
+                    </p>
+                </div>
+                <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-12">
+                        <div className="text-center space-y-2">
+                            <p className="text-lg font-medium">Authentication Required</p>
+                            <p className="text-sm text-muted-foreground">
+                                Please sign in to view this page.
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
-    // Handle errors gracefully instead of 404
-    if (!result?.data) {
+    try {
+        result = await listTeamMembers({ companyId: orgId });
+
+    } catch (error) {
+        console.error("Error fetching team members:", error);
+        const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+
+        return (
+            <div className="flex-1 space-y-6 p-6">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Team Members</h1>
+                    <p className="text-muted-foreground">
+                        Manage your team members and their roles
+                    </p>
+                </div>
+                <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-12">
+                        <div className="text-center space-y-4">
+                            <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                                <svg
+                                    className="w-6 h-6 text-destructive"
+                                    fill="none"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <p className="text-lg font-medium">Access Denied</p>
+                                <p className="text-sm text-muted-foreground mt-2">
+                                    {errorMessage}
+                                </p>
+                            </div>
+                            {errorMessage.includes("permission") && (
+                                <p className="text-xs text-muted-foreground">
+                                    Please contact your organization administrator to grant you access.
+                                </p>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    if (result?.serverError || !result?.data) {
+        console.error("Server error or missing data:", result?.serverError);
         return (
             <div className="flex-1 space-y-6 p-6">
                 <div>
@@ -79,7 +150,7 @@ async function UsersContent({ orgId }: { orgId: string }) {
         );
     }
 
-    const { activeMembers = [], pendingMembers = [], stats } = result.data.data || { stats: { owners: 0, admins: 0, editors: 0, viewers: 0 } };
+    const { activeMembers = [], pendingMembers = [], stats } = result.data.data || { activeMembers: [], pendingMembers: [], stats: { owners: 0, admins: 0, editors: 0, viewers: 0 } };
 
     return (
         <div className="flex-1 space-y-6 p-6">

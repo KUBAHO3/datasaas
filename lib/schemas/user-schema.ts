@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { COMPANY_ROLES } from "@/lib/constants/company-roles";
+import { RBAC_ROLES } from "@/lib/constants/rbac-roles";
 
 export const signInFormSchema = z.object({
   email: z
@@ -23,7 +24,7 @@ export const signUpSchema = z.object({
   jobTitle: z.enum(
     COMPANY_ROLES.map((role) => role.value) as [string, ...string[]],
     {
-      message: "Please select a valid job title", // Changed from errorMap
+      message: "Please select a valid job title",
     }
   ),
 });
@@ -76,12 +77,14 @@ export const changePasswordSchema = z
     path: ["newPassword"],
   });
 
-// Team member management schemas
 export const inviteTeamMemberSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
-  role: z.enum(["owner", "admin", "editor", "viewer"], {
-    message: "Please select a valid role",
-  }),
+  role: z.enum(
+    [RBAC_ROLES.OWNER, RBAC_ROLES.ADMIN, RBAC_ROLES.EDITOR, RBAC_ROLES.VIEWER],
+    {
+      message: "Please select a valid role",
+    }
+  ),
   name: z.string().min(2, "Name must be at least 2 characters").optional(),
   companyId: z.string().min(1, "Company ID is required"),
 });
@@ -89,9 +92,12 @@ export const inviteTeamMemberSchema = z.object({
 export const updateMemberRoleSchema = z.object({
   membershipId: z.string().min(1, "Membership ID is required"),
   companyId: z.string().min(1, "Company ID is required"),
-  role: z.enum(["owner", "admin", "editor", "viewer"], {
-    message: "Please select a valid role",
-  }),
+  role: z.enum(
+    [RBAC_ROLES.OWNER, RBAC_ROLES.ADMIN, RBAC_ROLES.EDITOR, RBAC_ROLES.VIEWER],
+    {
+      message: "Please select a valid role",
+    }
+  ),
 });
 
 export const removeMemberSchema = z.object({

@@ -11,14 +11,12 @@ export default async function SettingsPage({ params }: SettingsPageProps) {
   const { orgId } = await params;
   const userContext = await requireCompanyAccess(orgId);
 
-  //Check if user has permission (owner or admin)
   const hasPermission = userContext.role === 'owner' || userContext.role === 'admin';
 
   if (!hasPermission && !userContext.isSuperAdmin) {
     redirect(`/org/${orgId}`);
   }
 
-  // Get company details
   const companyModel = new CompanyAdminModel();
   const company = await companyModel.findById(orgId);
 

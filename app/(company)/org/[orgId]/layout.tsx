@@ -18,21 +18,16 @@ export default async function OrgLayout({ children, params }: OrgLayoutProps) {
     const { orgId } = await params;
     const userContext = await requireCompanyAccess(orgId);
 
-    // If user doesn't have access to this org, redirect to their org or show access denied
     if (!userContext.companyId || userContext.companyId !== orgId) {
-        // If user has a different company, redirect them there
         if (userContext.companyId) {
             redirect(`/org/${userContext.companyId}`);
         }
-        // Otherwise redirect to onboarding
         redirect('/onboarding');
     }
 
-    // Get company details for sidebar
     const companyModel = new CompanyAdminModel();
     const company = await companyModel.findById(orgId);
 
-    // If company doesn't exist, show proper error instead of 404
     if (!company) {
         return (
             <div className="min-h-screen flex items-center justify-center p-6 bg-muted/20">

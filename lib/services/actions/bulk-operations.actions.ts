@@ -33,7 +33,6 @@ export const bulkDeleteSubmissionsAction = authAction
       let deletedCount = 0;
       const errors: string[] = [];
 
-      // Delete each submission and its values
       for (const submissionId of submissionIds) {
         try {
           const submission = await submissionModel.findById(submissionId);
@@ -43,16 +42,12 @@ export const bulkDeleteSubmissionsAction = authAction
             continue;
           }
 
-          // Verify submission belongs to company
           if (submission.companyId !== company.$id) {
             errors.push(`Submission ${submissionId} does not belong to your company`);
             continue;
           }
 
-          // Delete all values for this submission
           await valueModel.deleteBySubmissionId(submissionId);
-
-          // Delete the submission
           await submissionModel.deleteById(submissionId);
 
           deletedCount++;
@@ -111,13 +106,11 @@ export const bulkDeleteFormsAction = authAction
             continue;
           }
 
-          // Verify form belongs to company
           if (form.companyId !== company.$id) {
             errors.push(`Form ${formId} does not belong to your company`);
             continue;
           }
 
-          // Delete all submissions for this form
           const client = await createAdminClient();
           const submissionsResult = await client.databases.listDocuments(
             DATABASE_ID,
@@ -130,7 +123,6 @@ export const bulkDeleteFormsAction = authAction
             await submissionModel.deleteById(submission.$id);
           }
 
-          // Delete the form
           await formModel.deleteById(formId);
 
           deletedCount++;

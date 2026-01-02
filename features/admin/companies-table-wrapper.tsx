@@ -13,7 +13,6 @@ import {
     Eye,
     Edit,
     Trash2,
-    Download,
     MoreVertical,
     Building2,
     Users,
@@ -25,7 +24,6 @@ import {
     approveCompanyAction,
     activateCompanyAction,
     bulkApproveCompaniesAction,
-    // exportCompaniesToCSV,
 } from "@/lib/services/actions/company.actions";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -83,7 +81,6 @@ export function CompaniesTableWrapper({
     const router = useRouter();
     const { confirm, ConfirmDialog } = useConfirm();
     const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
-    const [isExporting, setIsExporting] = useState(false);
 
     const [rejectDialog, setRejectDialog] = useState<{
         open: boolean;
@@ -213,29 +210,6 @@ export function CompaniesTableWrapper({
         }
     }
 
-    // async function handleExport() {
-    //     setIsExporting(true);
-    //     try {
-    //         const result = await exportCompaniesToCSV(filters);
-
-    //         const blob = new Blob([result.content], { type: "text/csv" });
-    //         const url = window.URL.createObjectURL(blob);
-    //         const a = document.createElement("a");
-    //         a.href = url;
-    //         a.download = result.filename;
-    //         document.body.appendChild(a);
-    //         a.click();
-    //         document.body.removeChild(a);
-    //         window.URL.revokeObjectURL(url);
-
-    //         toast.success("Companies exported successfully");
-    //     } catch (error) {
-    //         toast.error("Failed to export companies");
-    //     } finally {
-    //         setIsExporting(false);
-    //     }
-    // }
-
     function buildPageUrl(page: number) {
         const params = new URLSearchParams();
         if (filters.status) params.set("status", filters.status);
@@ -313,18 +287,6 @@ export function CompaniesTableWrapper({
                             </div>
                         </div>
                     )}
-
-                    {/* <div className="flex items-center justify-end border-b px-6 py-3">
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handleExport}
-                            disabled={isExporting}
-                        >
-                            <Download className="h-4 w-4 mr-1" />
-                            {isExporting ? "Exporting..." : "Export CSV"}
-                        </Button>
-                    </div> */}
 
                     <div className="overflow-x-auto">
                         <table className="w-full">
@@ -578,10 +540,6 @@ export function CompaniesTableWrapper({
                 <Suspense fallback={null}>
                     <RejectCompanyDialog
                         company={rejectDialog.company!}
-                    // open={rejectDialog.open}
-                    // onOpenChange={(open) =>
-                    //     setRejectDialog({ open, company: open ? rejectDialog.company : null })
-                    // }
                     />
                 </Suspense>
             )}
@@ -590,10 +548,6 @@ export function CompaniesTableWrapper({
                 <Suspense fallback={null}>
                     <EditCompanyDialog
                         company={editDialog.company!}
-                    // open={editDialog.open}
-                    // onOpenChange={(open) =>
-                    //     setEditDialog({ open, company: open ? editDialog.company : null })
-                    // }
                     />
                 </Suspense>
             )}
@@ -602,10 +556,6 @@ export function CompaniesTableWrapper({
                 <Suspense fallback={null}>
                     <DeleteCompanyDialog
                         company={deleteDialog.company!}
-                    // open={deleteDialog.open}
-                    // onOpenChange={(open) =>
-                    //     setDeleteDialog({ open, company: open ? deleteDialog.company : null })
-                    // }
                     />
                 </Suspense>
             )}

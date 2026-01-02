@@ -6,6 +6,7 @@ import {
   requireRole,
   requireSuperAdmin,
 } from "./permissions";
+import { getRoleArray } from "../constants/rbac-roles";
 
 export async function dashboardGuard() {
   return await requireAuth();
@@ -20,9 +21,9 @@ export async function companyGuard() {
 }
 
 export async function ownerGuard(companyId?: string) {
-  return await requireRole(["owner", "admin"], companyId);
+  return await requireRole(getRoleArray("OWNER_AND_ADMIN"), companyId);
 }
 
 export async function editorGuard(companyId?: string) {
-  return await requireRole(["owner", "admin", "editor"], companyId);
+  return await requireRole(getRoleArray("EDITOR_AND_ABOVE"), companyId);
 }

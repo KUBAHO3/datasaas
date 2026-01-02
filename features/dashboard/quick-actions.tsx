@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Database, FileText, Upload, UserPlus } from "lucide-react";
 import Link from "next/link";
+import { ROLE_ARRAYS } from "@/lib/constants/rbac-roles";
 
 interface QuickActionsProps {
     orgId: string;
@@ -9,8 +10,8 @@ interface QuickActionsProps {
 }
 
 export function QuickActions({ orgId, userRole }: QuickActionsProps) {
-    const canCreate = ["owner", "admin", "editor"].includes(userRole);
-    const canManageUsers = ["owner", "admin"].includes(userRole);
+    const canCreate = ROLE_ARRAYS.EDITOR_AND_ABOVE.includes(userRole as any);
+    const canManageUsers = ROLE_ARRAYS.OWNER_AND_ADMIN.includes(userRole as any);
 
     const actions = [
         {
