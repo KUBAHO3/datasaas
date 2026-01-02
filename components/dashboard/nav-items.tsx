@@ -28,6 +28,10 @@ const iconMap: Record<string, LucideIcon> = {
 export default function NavItems({ items }: { items: NavItem[] }) {
     const pathname = usePathname()
 
+    if (!items || items.length === 0) {
+        return null;
+    }
+
     return (
         <nav className="space-y-1">
             {items.map((item) => {

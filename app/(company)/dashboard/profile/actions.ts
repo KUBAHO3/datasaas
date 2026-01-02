@@ -18,13 +18,12 @@ export const getUserProfile = cache(async (userId: string): Promise<UserData | n
         return userData;
       } catch (error) {
         console.error('Failed to fetch user profile:', error);
-        // Return null instead of throwing to allow graceful degradation
         return null;
       }
     },
     [`user-profile-${userId}`],
     {
-      revalidate: 60, // Cache for 60 seconds
+      revalidate: 60,
       tags: [`user-profile-${userId}`],
     }
   )();

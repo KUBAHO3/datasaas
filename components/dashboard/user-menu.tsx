@@ -37,25 +37,33 @@ export default function UserMenu({
         <div className="border-t p-4">
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="w-full justify-start gap-2">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                    <Button variant="ghost" className="w-full justify-start gap-2 overflow-hidden">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted shrink-0">
                             <UserCircle className="h-5 w-5" />
                         </div>
 
-                        <div className="flex flex-1 flex-col items-start text-left text-sm">
-                            <span className="font-medium">{user.name}</span>
-                            <span className="text-xs text-muted-foreground">{user.role}</span>
+                        <div className="flex flex-1 flex-col items-start text-left text-sm min-w-0">
+                            <span className="font-medium truncate w-full" title={user.name}>
+                                {user.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground truncate w-full">
+                                {user.role}
+                            </span>
                         </div>
 
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                     </Button>
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>
                         <div className="flex flex-col space-y-1">
-                            <p className="text-sm font-medium">{user.name}</p>
-                            <p className="text-xs text-muted-foreground">{user.email}</p>
+                            <p className="text-sm font-medium truncate" title={user.name}>
+                                {user.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate" title={user.email}>
+                                {user.email}
+                            </p>
                         </div>
                     </DropdownMenuLabel>
 

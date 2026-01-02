@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AvatarUpload } from "@/components/user/avatar-upload";
 import { toast } from "sonner";
 import { useTransition } from "react";
 import { Loader2, Save, User2, Briefcase } from "lucide-react";
@@ -39,7 +39,7 @@ export function UserProfileForm({ user, userData }: UserProfileFormProps) {
       jobTitle: userData?.jobTitle || "",
       phone: userData?.phone || "",
       bio: userData?.bio || "",
-      avatar: userData?.avatar || "",
+      // Don't include avatar in form submission until upload feature is implemented
     },
   });
 
@@ -57,15 +57,6 @@ export function UserProfileForm({ user, userData }: UserProfileFormProps) {
     });
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -78,19 +69,10 @@ export function UserProfileForm({ user, userData }: UserProfileFormProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={userData?.avatar} alt={user.name} />
-                <AvatarFallback className="text-lg">
-                  {getInitials(user.name)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <p className="text-sm text-muted-foreground">
-                  Avatar upload feature coming soon
-                </p>
-              </div>
-            </div>
+            <AvatarUpload
+              currentAvatarUrl={userData?.avatar}
+              userName={user.name}
+            />
           </CardContent>
         </Card>
 

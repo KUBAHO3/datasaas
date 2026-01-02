@@ -1,5 +1,5 @@
 import AppSidebar from '@/components/dashboard/app-sidebar';
-import { companyNavItems } from '@/components/dashboard/nav-items';
+import { companyNavItems } from '@/components/dashboard/nav-config';
 import { requireCompany } from '@/lib/access-control/permissions';
 
 export default async function CompanyDashboardLayout({
@@ -9,10 +9,13 @@ export default async function CompanyDashboardLayout({
 }) {
     const userContext = await requireCompany();
 
+    // Get company ID from userContext
+    const orgId = userContext.companyId || '';
+
     return (
         <div className="flex h-screen overflow-hidden">
             <AppSidebar
-                navItems={companyNavItems}
+                navItems={companyNavItems(orgId)}
                 user={{
                     name: userContext.name,
                     email: userContext.email,

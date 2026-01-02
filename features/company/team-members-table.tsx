@@ -19,9 +19,12 @@ import {
     Trash2,
     Ban,
     CheckCircle,
+    Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { getProfileLink } from "@/lib/utils/profile-utils";
+import Link from "next/link";
 
 interface TeamMembersTableProps {
     members: TeamMember[];
@@ -160,6 +163,14 @@ export function TeamMembersTable({
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                     <DropdownMenuSeparator />
+                                                    {member.userId && (
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={getProfileLink(member.userId)}>
+                                                                <Eye className="mr-2 h-4 w-4" />
+                                                                View Profile
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                    )}
                                                     <DropdownMenuItem
                                                         onClick={() => onEditRole(member)}
                                                         disabled={isSelf}

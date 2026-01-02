@@ -27,10 +27,13 @@ export const updateUserProfileAction = authAction
       }
 
       const updateData: any = {};
-      if (jobTitle !== undefined) updateData.jobTitle = jobTitle;
-      if (phone !== undefined) updateData.phone = phone;
-      if (bio !== undefined) updateData.bio = bio;
-      if (avatar !== undefined) updateData.avatar = avatar;
+      if (jobTitle !== undefined) updateData.jobTitle = jobTitle || undefined;
+      if (phone !== undefined) updateData.phone = phone || undefined;
+      if (bio !== undefined) updateData.bio = bio || undefined;
+      // Only set avatar if it's a valid URL, otherwise set to undefined
+      if (avatar !== undefined) {
+        updateData.avatar = avatar && avatar.trim() !== "" ? avatar : undefined;
+      }
 
       await userDataModel.updateById(userData.$id, updateData);
 
