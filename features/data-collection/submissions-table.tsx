@@ -25,6 +25,16 @@ import {
     DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
     MoreHorizontal,
     Eye,
     Edit,
@@ -59,6 +69,10 @@ export function SubmissionsTable({
     onBulkDelete,
     onExport,
 }: SubmissionsTableProps) {
+    // Delete confirmation dialog state
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(null);
+
     // All available fields (excluding structural fields)
     const allFields = useMemo(() =>
         form.fields.filter(f =>
@@ -76,6 +90,20 @@ export function SubmissionsTable({
         });
         return initial;
     });
+
+    // Handle delete confirmation
+    const handleDeleteClick = (submissionId: string) => {
+        setSubmissionToDelete(submissionId);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (submissionToDelete) {
+            onDelete(submissionToDelete);
+            setSubmissionToDelete(null);
+        }
+        setDeleteDialogOpen(false);
+    };
 
     // Get visible fields based on column visibility state
     const visibleFields = useMemo(() =>
@@ -127,6 +155,7 @@ export function SubmissionsTable({
     const visibleColumnsCount = Object.values(columnVisibility).filter(Boolean).length;
 
     return (
+        <>
         <Card>
             <CardHeader className="border-b py-3">
                 <div className="flex items-center justify-between">
@@ -274,15 +303,7 @@ export function SubmissionsTable({
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
                                                         <DropdownMenuItem
-                                                            onClick={() => {
-                                                                if (
-                                                                    confirm(
-                                                                        "Delete this submission? This cannot be undone."
-                                                                    )
-                                                                ) {
-                                                                    onDelete(row.submission.$id);
-                                                                }
-                                                            }}
+                                                            onClick={() => handleDeleteClick(row.submission.$id)}
                                                             className="text-destructive"
                                                         >
                                                             <Trash2 className="h-4 w-4 mr-2" />
@@ -300,5 +321,26 @@ export function SubmissionsTable({
                 </div>
             </CardContent>
         </Card>
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Submission</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Are you sure you want to delete this submission? This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={handleDeleteConfirm}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                        Delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    </>
     );
 }

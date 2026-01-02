@@ -179,7 +179,9 @@ export const can = {
     if (!userContext) return false;
     if (userContext.isSuperAdmin) return true;
 
-    return userContext.role === "owner" || userContext.role === "admin";
+    return userContext.role
+      ? ROLE_ARRAYS.OWNER_AND_ADMIN.includes(userContext.role as any)
+      : false;
   },
 
   editContent: async (): Promise<boolean> => {
@@ -188,7 +190,9 @@ export const can = {
     if (!userContext) return false;
     if (userContext.isSuperAdmin) return true;
 
-    return ["owner", "admin", "editor"].includes(userContext.role || "");
+    return userContext.role
+      ? ROLE_ARRAYS.EDITOR_AND_ABOVE.includes(userContext.role as any)
+      : false;
   },
 };
 

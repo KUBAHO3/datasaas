@@ -1,8 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Database, FileText, Upload, UserPlus } from "lucide-react";
+import { Database, FileText, Upload, UserPlus, Lock } from "lucide-react";
 import Link from "next/link";
 import { ROLE_ARRAYS } from "@/lib/constants/rbac-roles";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface QuickActionsProps {
     orgId: string;
@@ -22,6 +28,7 @@ export function QuickActions({ orgId, userRole }: QuickActionsProps) {
             color: "text-blue-600",
             bgColor: "bg-blue-50 dark:bg-blue-950",
             enabled: canCreate,
+            requiredRole: "Editor or above"
         },
         {
             title: "Upload Data",
@@ -31,6 +38,7 @@ export function QuickActions({ orgId, userRole }: QuickActionsProps) {
             color: "text-green-600",
             bgColor: "bg-green-50 dark:bg-green-950",
             enabled: canCreate,
+            requiredRole: "Editor or above"
         },
         {
             title: "View Data",
@@ -40,6 +48,7 @@ export function QuickActions({ orgId, userRole }: QuickActionsProps) {
             color: "text-purple-600",
             bgColor: "bg-purple-50 dark:bg-purple-950",
             enabled: true,
+            requiredRole: "All users"
         },
         {
             title: "Manage Users",
@@ -49,41 +58,58 @@ export function QuickActions({ orgId, userRole }: QuickActionsProps) {
             color: "text-orange-600",
             bgColor: "bg-orange-50 dark:bg-orange-950",
             enabled: canManageUsers,
+            requiredRole: "Owner or Admin"
         },
     ];
 
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {actions.map((action) => {
-                const Icon = action.icon;
-                return (
-                    <Card
-                        key={action.title}
-                        className={action.enabled ? "hover:shadow-md transition-shadow" : "opacity-60"}
-                    >
-                        <CardHeader>
-                            <div className={`rounded-full p-3 w-fit ${action.bgColor}`}>
-                                <Icon className={`h-6 w-6 ${action.color}`} />
-                            </div>
-                            <CardTitle className="text-base">{action.title}</CardTitle>
-                            <CardDescription className="text-xs">
-                                {action.description}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {action.enabled ? (
-                                <Button asChild className="w-full">
-                                    <Link href={action.href}>Get Started</Link>
-                                </Button>
-                            ) : (
-                                <Button disabled className="w-full">
-                                    Restricted
-                                </Button>
-                            )}
-                        </CardContent>
-                    </Card>
-                );
-            })}
-        </div>
+        <TooltipProvider>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {actions.map((action) => {
+                    const Icon = action.icon;
+                    return (
+                        <Card
+                            key={action.title}
+                            className={action.enabled ? "hover:shadow-md transition-shadow" : "opacity-60 border-muted"}
+                        >
+                            <CardHeader>
+                                <div className={`rounded-full p-3 w-fit ${action.enabled ? action.bgColor : 'bg-muted'}`}>
+                                    <Icon className={`h-6 w-6 ${action.enabled ? action.color : 'text-muted-foreground'}`} />
+                                </div>
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    {action.title}
+                                    {!action.enabled && <Lock className="h-3 w-3 text-muted-foreground" />}
+                                </CardTitle>
+                                <CardDescription className="text-xs">
+                                    {action.description}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {action.enabled ? (
+                                    <Button asChild className="w-full">
+                                        <Link href={action.href}>Get Started</Link>
+                                    </Button>
+                                ) : (
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <div className="w-full">
+                                                <Button disabled className="w-full">
+                                                    <Lock className="mr-2 h-4 w-4" />
+                                                    Requires {action.requiredRole}
+                                                </Button>
+                                            </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>You need {action.requiredRole} permission to access this feature.</p>
+                                            <p className="text-xs mt-1">Your current role: {userRole || 'No role assigned'}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                )}
+                            </CardContent>
+                        </Card>
+                    );
+                })}
+            </div>
+        </TooltipProvider>
     );
 }

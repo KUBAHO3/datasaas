@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Form } from "@/lib/types/form-types";
 import { SubmissionRow } from "@/lib/types/submission-types";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -13,6 +14,16 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
     MoreVertical,
     Eye,
@@ -46,6 +57,24 @@ export function SubmissionsCardView({
     onEdit,
     onDelete,
 }: SubmissionsCardViewProps) {
+    // Delete confirmation dialog state
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [submissionToDelete, setSubmissionToDelete] = useState<string | null>(null);
+
+    // Handle delete confirmation
+    const handleDeleteClick = (submissionId: string) => {
+        setSubmissionToDelete(submissionId);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (submissionToDelete) {
+            onDelete(submissionToDelete);
+            setSubmissionToDelete(null);
+        }
+        setDeleteDialogOpen(false);
+    };
+
     function handleSelectCard(id: string, checked: boolean) {
         if (checked) {
             onSelectionChange([...selectedIds, id]);
@@ -64,6 +93,7 @@ export function SubmissionsCardView({
         .slice(0, 4);
 
     return (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {rows.map((row) => {
                 const isSelected = selectedIds.includes(row.submission.$id);
@@ -125,15 +155,7 @@ export function SubmissionsCardView({
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem
-                                            onClick={() => {
-                                                if (
-                                                    confirm(
-                                                        "Delete this submission? This cannot be undone."
-                                                    )
-                                                ) {
-                                                    onDelete(row.submission.$id);
-                                                }
-                                            }}
+                                            onClick={() => handleDeleteClick(row.submission.$id)}
                                             className="text-destructive"
                                         >
                                             <Trash2 className="h-4 w-4 mr-2" />
@@ -211,5 +233,26 @@ export function SubmissionsCardView({
                 );
             })}
         </div>
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Submission</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Are you sure you want to delete this submission? This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={handleDeleteConfirm}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                        Delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    </>
     );
 }

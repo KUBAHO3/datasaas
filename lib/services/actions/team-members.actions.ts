@@ -73,7 +73,7 @@ export const listTeamMembers = createRoleAction(getRoleArray("ALL_ROLES"))
     const { companyId } = parsedInput;
 
     if (!ctx.isSuperAdmin && "companyId" in ctx && ctx.companyId !== companyId) {
-      throw new Error("You do not have permission to view this company's members");
+      throw new Error("Access denied: You can only view members from your own company.");
     }
 
     const teamsService = new AdminTeamsService();
@@ -127,7 +127,7 @@ export const inviteTeamMember = createRoleAction(getRoleArray("OWNER_AND_ADMIN")
     const { email, role, name, companyId } = parsedInput;
 
     if (!ctx.isSuperAdmin && "companyId" in ctx && ctx.companyId !== companyId) {
-      throw new Error("You do not have permission to invite members to this company");
+      throw new Error("Access denied: You can only invite members to your own company.");
     }
 
     const teamsService = new AdminTeamsService();
@@ -141,21 +141,21 @@ export const inviteTeamMember = createRoleAction(getRoleArray("OWNER_AND_ADMIN")
     );
 
     if (isAlreadyMember) {
-      throw new Error("This user is already a member of this company");
+      throw new Error(`Unable to send invitation: ${email} is already a member of your company.`);
     }
 
     const invitationModel = new InvitationAdminModel();
     const existingInvitation = await invitationModel.findByEmailAndCompany(email, companyId);
 
     if (existingInvitation) {
-      throw new Error("This user already has a pending invitation");
+      throw new Error(`Unable to send invitation: ${email} already has a pending invitation. You can resend the invitation from the team members list.`);
     }
 
     const companyModel = new CompanyAdminModel();
     const company = await companyModel.findById(companyId);
 
     if (!company) {
-      throw new Error("Company not found");
+      throw new Error("Company not found. Please refresh the page and try again.");
     }
 
     const token = InvitationAdminModel.generateToken();
@@ -205,7 +205,7 @@ export const updateMemberRole = createRoleAction(getRoleArray("OWNER_AND_ADMIN")
     const { membershipId, companyId, role } = parsedInput;
 
     if (!ctx.isSuperAdmin && "companyId" in ctx && ctx.companyId !== companyId) {
-      throw new Error("You do not have permission to update members in this company");
+      throw new Error("Access denied: You can only update members in your own company.");
     }
 
     const teamsService = new AdminTeamsService();
@@ -218,7 +218,7 @@ export const updateMemberRole = createRoleAction(getRoleArray("OWNER_AND_ADMIN")
       ).length;
 
       if (ownerCount <= 1) {
-        throw new Error("Cannot change role. There must be at least one owner in the team.");
+        throw new Error("Unable to change role: Every company must have at least one owner. Please promote another member to owner before changing this user's role.");
       }
     }
 
@@ -249,11 +249,11 @@ export const removeMember = createRoleAction(getRoleArray("OWNER_AND_ADMIN"))
     const { membershipId, companyId, userId } = parsedInput;
 
     if (!ctx.isSuperAdmin && "companyId" in ctx && ctx.companyId !== companyId) {
-      throw new Error("You do not have permission to remove members from this company");
+      throw new Error("Access denied: You can only remove members from your own company.");
     }
 
     if (userId === ctx.userId) {
-      throw new Error("You cannot remove yourself from the team");
+      throw new Error("Unable to remove member: You cannot remove yourself from the team. Please ask another owner or admin to remove you.");
     }
 
     // Check if this is a pending invitation (userId is "pending" or null)
@@ -287,7 +287,7 @@ export const removeMember = createRoleAction(getRoleArray("OWNER_AND_ADMIN"))
       ).length;
 
       if (ownerCount <= 1) {
-        throw new Error("Cannot remove the last owner. Please assign another owner first.");
+        throw new Error("Unable to remove member: Every company must have at least one owner. Please promote another member to owner before removing this user.");
       }
     }
 
@@ -309,7 +309,7 @@ export const resendInvitation = createRoleAction(getRoleArray("OWNER_AND_ADMIN")
     const { invitationId, companyId } = parsedInput;
 
     if (!ctx.isSuperAdmin && "companyId" in ctx && ctx.companyId !== companyId) {
-      throw new Error("You do not have permission to manage invitations for this company");
+      throw new Error("Access denied: You can only manage invitations for your own company.");
     }
 
     const { InvitationAdminModel } = await import("../models/invitation.model");
@@ -319,15 +319,15 @@ export const resendInvitation = createRoleAction(getRoleArray("OWNER_AND_ADMIN")
     const oldInvitation = await invitationModel.findById(invitationId);
 
     if (!oldInvitation) {
-      throw new Error("Invitation not found");
+      throw new Error("Invitation not found. It may have been deleted or already accepted.");
     }
 
     if (oldInvitation.status === "accepted") {
-      throw new Error("This invitation has already been accepted");
+      throw new Error("Unable to resend invitation: This invitation has already been accepted. The user is now a team member.");
     }
 
     if (oldInvitation.companyId !== companyId) {
-      throw new Error("Invitation does not belong to this company");
+      throw new Error("Access denied: This invitation belongs to a different company.");
     }
 
     await invitationModel.delete(invitationId);
@@ -374,11 +374,11 @@ export const suspendMember = createRoleAction(getRoleArray("OWNER_AND_ADMIN"))
     const { membershipId, companyId, userId, reason } = parsedInput;
 
     if (!ctx.isSuperAdmin && "companyId" in ctx && ctx.companyId !== companyId) {
-      throw new Error("You do not have permission to suspend members in this company");
+      throw new Error("Access denied: You can only suspend members in your own company.");
     }
 
     if (userId === ctx.userId) {
-      throw new Error("You cannot suspend yourself");
+      throw new Error("Unable to suspend member: You cannot suspend yourself. Please ask another owner or admin if you need to be suspended.");
     }
 
     const teamsService = new AdminTeamsService();
@@ -391,7 +391,7 @@ export const suspendMember = createRoleAction(getRoleArray("OWNER_AND_ADMIN"))
       ).length;
 
       if (activeOwnerCount <= 1) {
-        throw new Error("Cannot suspend the last owner. Please assign another owner first.");
+        throw new Error("Unable to suspend member: Every company must have at least one active owner. Please promote another member to owner before suspending this user.");
       }
     }
 
@@ -399,11 +399,11 @@ export const suspendMember = createRoleAction(getRoleArray("OWNER_AND_ADMIN"))
     const userData = await userDataModel.findByUserId(userId);
 
     if (!userData) {
-      throw new Error("User data not found");
+      throw new Error("User data not found. The user may have been deleted. Please refresh the page and try again.");
     }
 
     if (userData.companyId !== companyId) {
-      throw new Error("User does not belong to this company");
+      throw new Error("Access denied: This user does not belong to your company.");
     }
 
     await userDataModel.updateById(userData.$id, {
@@ -428,14 +428,14 @@ export const unsuspendMember = createRoleAction(getRoleArray("OWNER_AND_ADMIN"))
     const { companyId, userId } = parsedInput;
 
     if (!ctx.isSuperAdmin && "companyId" in ctx && ctx.companyId !== companyId) {
-      throw new Error("You do not have permission to unsuspend members in this company");
+      throw new Error("Access denied: You can only unsuspend members in your own company.");
     }
 
     const userDataModel = new UserDataAdminModel();
     const userData = await userDataModel.findByUserId(userId);
 
     if (!userData) {
-      throw new Error("User data not found");
+      throw new Error("User data not found. The user may have been deleted. Please refresh the page and try again.");
     }
 
     await userDataModel.updateById(userData.$id, {
@@ -469,16 +469,16 @@ export const acceptInvitation = action
     const invitation = await invitationModel.findByToken(token);
 
     if (!invitation) {
-      throw new Error("Invalid invitation token");
+      throw new Error("Invalid invitation: The invitation link is invalid or has been deleted. Please contact your company administrator for a new invitation.");
     }
 
     if (invitationModel.isExpired(invitation)) {
       await invitationModel.updateStatus(invitation.$id, "expired");
-      throw new Error("This invitation has expired");
+      throw new Error("Invitation expired: This invitation has expired. Please contact your company administrator to receive a new invitation.");
     }
 
     if (invitation.status !== "pending") {
-      throw new Error("This invitation has already been used");
+      throw new Error("Invitation already used: This invitation has already been accepted. If you're having trouble signing in, please use the password reset feature.");
     }
 
     const userId = ID.unique();

@@ -64,14 +64,14 @@ export const authAction = createSafeActionClient({
   const session = cookieStore.get(AUTH_COOKIE);
 
   if (!session) {
-    throw new Error("You must be signed in to perform this action");
+    throw new Error("Authentication required. Please sign in to perform this action.");
   }
 
   const sessionAccountService = new SessionAccountService();
   const user = await sessionAccountService.get();
 
   if (!user) {
-    throw new Error("Invalid session");
+    throw new Error("Your session is invalid or has expired. Please sign in again.");
   }
 
   const isSuperAdmin = user.labels?.includes("superadmin") ?? false;
@@ -81,7 +81,7 @@ export const authAction = createSafeActionClient({
   if (!accessResult.hasAccess) {
     if (accessResult.reason === "suspended") {
       throw new Error(
-        `Your company account (${accessResult.companyName}) has been suspended. Please contact support for assistance.`
+        `Access denied: Your company account "${accessResult.companyName}" has been suspended. Please contact support at kubaholinne@gmail.com for assistance.`
       );
     }
   }
@@ -128,20 +128,20 @@ export const superAdminAction = createSafeActionClient({
   const session = cookieStore.get(AUTH_COOKIE);
 
   if (!session) {
-    throw new Error("You must be signed in to perform this action");
+    throw new Error("Authentication required. Please sign in to perform this action.");
   }
 
   const sessionAccountService = new SessionAccountService();
   const user = await sessionAccountService.get();
 
   if (!user) {
-    throw new Error("Invalid session");
+    throw new Error("Your session is invalid or has expired. Please sign in again.");
   }
 
   const isSuperAdmin = user.labels?.includes("superadmin") || false;
 
   if (!isSuperAdmin) {
-    throw new Error("You do not have permission to perform this action");
+    throw new Error("Access denied: This action requires Super Admin privileges. Only system administrators can perform this operation.");
   }
 
   return next({
@@ -185,27 +185,27 @@ export function createRoleAction(allowedRoles: string[]) {
     const cookieStore = await cookies();
     const session = cookieStore.get(AUTH_COOKIE);
 
-    
+
     if (!session) {
-      throw new Error("You must be signed in to perform this action");
+      throw new Error("Authentication required. Please sign in to perform this action.");
     }
-    
+
     try {
       const sessionAccountService = new SessionAccountService();
       const user = await sessionAccountService.get();
-      
+
       if (!user) {
-        throw new Error("Invalid session");
+        throw new Error("Your session is invalid or has expired. Please sign in again.");
       }
-      
+
       const isSuperAdmin = user.labels?.includes("superadmin") || false;
-      
+
       const accessResult = await checkCompanyAccess(user.$id, isSuperAdmin);
-      
+
       if (!accessResult.hasAccess) {
         if (accessResult.reason === "suspended") {
           throw new Error(
-            `Your company account (${accessResult.companyName}) has been suspended. Please contact support for assistance.`
+            `Access denied: Your company account "${accessResult.companyName}" has been suspended. Please contact support at kubaholinne@gmail.com for assistance.`
           );
         }
       }
@@ -232,7 +232,7 @@ export function createRoleAction(allowedRoles: string[]) {
       // Validate user has either a role or jobTitle assigned
       if (!userData?.role && !userData?.jobTitle) {
         throw new Error(
-          "Your account does not have permissions assigned. Please contact your company administrator."
+          "Access denied: Your account does not have permissions assigned. Please contact your company administrator to assign you a role."
         );
       }
 
@@ -250,7 +250,7 @@ export function createRoleAction(allowedRoles: string[]) {
         } else {
           console.error(`Invalid role detected: ${userData.role} for user ${user.$id}`);
           throw new Error(
-            "Your account has an invalid role. Please contact support."
+            "Access denied: Your account has an invalid role configuration. Please contact kubaholinne@gmail.com for assistance."
           );
         }
       }
@@ -263,8 +263,13 @@ export function createRoleAction(allowedRoles: string[]) {
 
       if (!hasPermission(permissionContext, allowedRoles)) {
         const userPermissions = getPermissionDescription(permissionContext);
+        const roleLabels = allowedRoles.map(r => {
+          const { ROLE_DESCRIPTIONS } = require("./constants/rbac-roles");
+          return ROLE_DESCRIPTIONS[r as any]?.label || r;
+        }).join(", ");
+
         throw new Error(
-          `Insufficient permissions. This action requires one of the following roles: ${allowedRoles.join(", ")}.\n\nYour permissions: ${userPermissions}`
+          `Access denied: This action requires ${roleLabels} permission.\n\nYour current permissions: ${userPermissions}\n\nPlease contact your company administrator if you believe you should have access to this feature.`
         );
       }
 
