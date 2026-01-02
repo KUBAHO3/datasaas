@@ -19,26 +19,21 @@ async function SuspendedContent() {
 
   const isSuperAdmin = user.labels?.includes("superadmin") ?? false;
 
-  // Super admins shouldn't see this page
   if (isSuperAdmin) {
     redirect("/admin");
   }
 
-  // Check if user is suspended
   const userDataModel = new UserDataAdminModel();
   const userData = await userDataModel.findByUserId(user.$id);
   const isUserSuspended = userData?.suspended ?? false;
 
-  // Check if company is suspended
   const company = await getUserCompanyWithStatus(user.$id);
   const isCompanySuspended = company?.status === "suspended";
 
-  // If neither user nor company is suspended, redirect to dashboard
   if (!isUserSuspended && !isCompanySuspended) {
     redirect("/org");
   }
 
-  // Determine which suspension type to show
   const suspensionType = isUserSuspended ? "user" : "company";
 
   return (
