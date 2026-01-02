@@ -34,8 +34,8 @@ export class ImportParserService {
       }
 
       // Convert sheet to JSON
-      // header: 1 means use first row as headers
-      const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, {
+      // header: 1 means return array of arrays (not objects)
+      const jsonData = XLSX.utils.sheet_to_json<any[]>(worksheet, {
         header: 1,
         defval: "", // Default value for empty cells
         blankrows: false, // Skip completely empty rows

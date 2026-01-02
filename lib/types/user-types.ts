@@ -33,7 +33,7 @@ export interface TeamMember {
   role: TeamMemberRole;
   confirmed: boolean;
   invited: string;
-  joined: string;
+  joined?: string; // Optional because pending members haven't joined yet
   suspended?: boolean; // Whether member is suspended
   suspendedAt?: string; // Timestamp when member was suspended
   $createdAt: string;

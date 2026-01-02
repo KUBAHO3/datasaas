@@ -121,9 +121,9 @@ function FieldCard({
     // Check if field is incomplete
     const fieldTypesRequiringOptions = ["dropdown", "radio", "checkbox", "multi_select"];
     const requiresOptions = fieldTypesRequiringOptions.includes(field.type);
-    const hasOptions = field.options && field.options.length > 0;
+    const hasOptions = 'options' in field && field.options && field.options.length > 0;
     const hasEmptyLabel = !field.label || field.label.trim() === "";
-    const hasEmptyOptions = field.options?.some(opt => !opt.label || opt.label.trim() === "") || false;
+    const hasEmptyOptions = ('options' in field && field.options?.some(opt => !opt.label || opt.label.trim() === "")) || false;
 
     const isIncomplete = hasEmptyLabel || (requiresOptions && !hasOptions) || hasEmptyOptions;
     const warningMessage = hasEmptyLabel

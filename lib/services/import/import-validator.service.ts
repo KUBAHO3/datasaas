@@ -1,5 +1,5 @@
 import "server-only";
-import type { Form, FormField } from "@/lib/types/import-types";
+import type { Form, FormField } from "@/lib/types/form-types";
 import type {
   ColumnMapping,
   RowError,
@@ -258,8 +258,8 @@ export class ImportValidatorService {
 
       case "scale":
         const scale = Number(value);
-        const min = field.minValue || 1;
-        const max = field.maxValue || 10;
+        const min = (field as any).min || 1;
+        const max = (field as any).max || 10;
         if (isNaN(scale) || scale < min || scale > max) {
           return {
             error: `Must be a number between ${min} and ${max}`,

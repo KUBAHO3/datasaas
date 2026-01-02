@@ -8,7 +8,7 @@ export default async function Step2Page() {
 
     const company = await getOnboardingProgress();
 
-    if (company.currentStep > 2 && company.currentStep < 6 && company.status === "draft") {
+    if (company.currentStep && company.currentStep > 2 && company.currentStep < 6 && company.status === "draft") {
         redirect(`/onboarding/step-${company.currentStep}`);
     }
 

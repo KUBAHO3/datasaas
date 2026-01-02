@@ -79,9 +79,7 @@ export const uploadFileMetadataSchema = z.object({
     "application/vnd.ms-excel", // .xls
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
     "text/csv", // .csv
-  ], {
-    errorMap: () => ({ message: "Only Excel (.xls, .xlsx) and CSV files are supported" }),
-  }),
+  ], "Only Excel (.xls, .xlsx) and CSV files are supported"),
 });
 
 /**

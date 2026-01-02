@@ -12,6 +12,7 @@ import { FormAdminModel } from "../models/form.model";
 import { ImportJobAdminModel } from "../models/import-job.model";
 import { FormSubmissionAdminModel } from "../models/form-submission.model";
 import { SubmissionValueAdminModel } from "../models/submission-value.model";
+import { UserDataAdminModel } from "../models/users.model";
 import { ImportParserService } from "../import/import-parser.service";
 import { ImportValidatorService } from "../import/import-validator.service";
 import { ImportService } from "../import/import.service";
@@ -251,7 +252,7 @@ export const executeImportAction = authAction
       // Create import job for tracking
       const importJobModel = new ImportJobAdminModel();
       const importJob = await importJobModel.create({
-        companyId: ctx.user.companyId!,
+        companyId: form.companyId,
         formId,
         fileId,
         fileName: "import.xlsx",
@@ -323,11 +324,11 @@ export const executeImportAction = authAction
             const submission = await submissionModel.create({
               formId,
               formVersion: parsedForm.version || 1,
-              companyId: ctx.user.companyId!,
+              companyId: form.companyId,
               data: submissionData,
               status: "completed",
               submittedBy: ctx.userId,
-              submittedByEmail: ctx.user.email,
+              submittedByEmail: ctx.email,
               isAnonymous: false,
               startedAt: new Date().toISOString(),
               lastSavedAt: new Date().toISOString(),
@@ -342,7 +343,7 @@ export const executeImportAction = authAction
               const value = SubmissionValueHelpers.fromFieldValue(
                 submission.$id,
                 formId,
-                ctx.user.companyId!,
+                form.companyId,
                 field,
                 submissionData[fieldId]
               );
@@ -411,8 +412,8 @@ export const executeImportAction = authAction
       }
 
       // Revalidate paths
-      revalidatePath(`/org/${ctx.user.companyId}/data-collection`);
-      revalidatePath(`/org/${ctx.user.companyId}/forms/${formId}`);
+      revalidatePath(`/org/${form.companyId}/data-collection`);
+      revalidatePath(`/org/${form.companyId}/forms/${formId}`);
 
       return {
         success: true,
@@ -452,8 +453,14 @@ export const getImportProgressAction = authAction
         return { error: "Import job not found" };
       }
 
-      if (job.companyId !== ctx.user.companyId) {
-        return { error: "Unauthorized access to this import job" };
+      // Verify user has access to this company's import job
+      if (!ctx.isSuperAdmin) {
+        const userDataModel = new UserDataAdminModel();
+        const userData = await userDataModel.findByUserId(ctx.userId);
+
+        if (!userData || userData.companyId !== job.companyId) {
+          return { error: "Unauthorized access to this import job" };
+        }
       }
 
       const percentage =
@@ -500,8 +507,14 @@ export const cancelImportAction = authAction
         return { error: "Import job not found" };
       }
 
-      if (job.companyId !== ctx.user.companyId) {
-        return { error: "Unauthorized access to this import job" };
+      // Verify user has access to this company's import job
+      if (!ctx.isSuperAdmin) {
+        const userDataModel = new UserDataAdminModel();
+        const userData = await userDataModel.findByUserId(ctx.userId);
+
+        if (!userData || userData.companyId !== job.companyId) {
+          return { error: "Unauthorized access to this import job" };
+        }
       }
 
       // Can only cancel pending/in-progress jobs

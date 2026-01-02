@@ -29,12 +29,10 @@ export default async function OnboardingRootLayout({
                             Complete the steps below to register your company
                         </p>
                     </div>
-                    {progress.error ? <></> : (
-                        <OnboardingStepper
-                            currentStep={progress.currentStep}
-                            completedSteps={progress.completedSteps}
-                        />
-                    )}
+                    <OnboardingStepper
+                        currentStep={progress.currentStep ?? 1}
+                        completedSteps={progress.completedSteps ?? []}
+                    />
 
                     {children}
                 </div>

@@ -46,7 +46,7 @@ export function FieldConfigDialog({
         }
 
         // Check if fields that require options have at least one option
-        if (supportsOptions) {
+        if (supportsOptions && 'options' in field) {
             const options = field.options || [];
             if (options.length === 0) {
                 errors.push(`${getFieldTypeName(field.type)} fields require at least one option`);

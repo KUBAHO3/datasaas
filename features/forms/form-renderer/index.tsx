@@ -22,7 +22,6 @@ export function FormRenderer({ form, userContext }: FormRendererProps) {
     const isPublicForm =
         form.settings?.isPublic ||
         form.settings?.allowAnonymous ||
-        form.accessControl?.isPublic ||
         form.accessControl?.visibility === "public";
 
     // Use the appropriate action based on whether it's a public form

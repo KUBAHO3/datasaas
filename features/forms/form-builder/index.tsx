@@ -74,7 +74,7 @@ export function FormBuilder({ form: initialForm, orgId }: FormBuilderProps) {
             }
 
             // Check if fields requiring options have at least one option
-            if (fieldTypesRequiringOptions.includes(field.type)) {
+            if (fieldTypesRequiringOptions.includes(field.type) && 'options' in field) {
                 const options = field.options || [];
                 if (options.length === 0) {
                     errors.push(`Field "${field.label || `#${index + 1}`}" requires at least one option`);

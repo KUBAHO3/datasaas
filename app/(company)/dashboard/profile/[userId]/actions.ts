@@ -68,18 +68,24 @@ export const updateUserRoleAction = createRoleAction(
         };
       }
 
-      // Verify same company
-      if (targetUser.companyId !== ctx.companyId) {
-        return {
-          error: "You can only manage users in your company",
-        };
+      // Verify same company (superadmins can manage users across companies)
+      if (!ctx.isSuperAdmin) {
+        const userCtx = ctx as typeof ctx & { companyId: string };
+        if (targetUser.companyId !== userCtx.companyId) {
+          return {
+            error: "You can only manage users in your company",
+          };
+        }
       }
 
-      // Prevent non-owners from changing owner roles
-      if (targetUser.role === RBAC_ROLES.OWNER && ctx.role !== RBAC_ROLES.OWNER) {
-        return {
-          error: "Only owners can change other owners' roles",
-        };
+      // Prevent non-owners from changing owner roles (superadmins can)
+      if (targetUser.role === RBAC_ROLES.OWNER && !ctx.isSuperAdmin) {
+        const userCtx = ctx as typeof ctx & { role?: string };
+        if (userCtx.role !== RBAC_ROLES.OWNER) {
+          return {
+            error: "Only owners can change other owners' roles",
+          };
+        }
       }
 
       // Update the role
@@ -138,18 +144,24 @@ export const suspendUserAction = createRoleAction(
         };
       }
 
-      // Verify same company
-      if (targetUser.companyId !== ctx.companyId) {
-        return {
-          error: "You can only suspend users in your company",
-        };
+      // Verify same company (superadmins can suspend users across companies)
+      if (!ctx.isSuperAdmin) {
+        const userCtx = ctx as typeof ctx & { companyId: string };
+        if (targetUser.companyId !== userCtx.companyId) {
+          return {
+            error: "You can only suspend users in your company",
+          };
+        }
       }
 
-      // Prevent non-owners from suspending owners
-      if (targetUser.role === RBAC_ROLES.OWNER && ctx.role !== RBAC_ROLES.OWNER) {
-        return {
-          error: "Only owners can suspend other owners",
-        };
+      // Prevent non-owners from suspending owners (superadmins can)
+      if (targetUser.role === RBAC_ROLES.OWNER && !ctx.isSuperAdmin) {
+        const userCtx = ctx as typeof ctx & { role?: string };
+        if (userCtx.role !== RBAC_ROLES.OWNER) {
+          return {
+            error: "Only owners can suspend other owners",
+          };
+        }
       }
 
       // Check if already suspended
@@ -202,11 +214,14 @@ export const unsuspendUserAction = createRoleAction(
         };
       }
 
-      // Verify same company
-      if (targetUser.companyId !== ctx.companyId) {
-        return {
-          error: "You can only unsuspend users in your company",
-        };
+      // Verify same company (superadmins can unsuspend users across companies)
+      if (!ctx.isSuperAdmin) {
+        const userCtx = ctx as typeof ctx & { companyId: string };
+        if (targetUser.companyId !== userCtx.companyId) {
+          return {
+            error: "You can only unsuspend users in your company",
+          };
+        }
       }
 
       // Check if actually suspended
@@ -270,11 +285,14 @@ export const updateUserDetailsAction = createRoleAction(
         };
       }
 
-      // Verify same company
-      if (targetUser.companyId !== ctx.companyId) {
-        return {
-          error: "You can only update users in your company",
-        };
+      // Verify same company (superadmins can update users across companies)
+      if (!ctx.isSuperAdmin) {
+        const userCtx = ctx as typeof ctx & { companyId: string };
+        if (targetUser.companyId !== userCtx.companyId) {
+          return {
+            error: "You can only update users in your company",
+          };
+        }
       }
 
       await userDataModel.updateById(targetUser.$id, updates);

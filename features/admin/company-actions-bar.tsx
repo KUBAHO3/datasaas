@@ -22,7 +22,6 @@ import {
 import { useState, useTransition, lazy, Suspense } from "react";
 import {
     approveCompanyAction,
-    suspendCompanyAction,
     activateCompanyAction,
 } from "@/lib/services/actions/company.actions";
 import { toast } from "sonner";
@@ -34,6 +33,9 @@ const RejectCompanyDialog = lazy(
 const EditCompanyDialog = lazy(() => import("./edit-company-dialog"));
 const DeleteCompanyDialog = lazy(
     () => import("./delete-company-dialog")
+);
+const SuspendCompanyDialog = lazy(
+    () => import("./suspend-company-dialog").then(mod => ({ default: mod.SuspendCompanyDialog }))
 );
 
 interface CompanyActionsBarProps {
@@ -47,6 +49,7 @@ export function CompanyActionsBar({ company }: CompanyActionsBarProps) {
     const [rejectDialog, setRejectDialog] = useState(false);
     const [editDialog, setEditDialog] = useState(false);
     const [deleteDialog, setDeleteDialog] = useState(false);
+    const [suspendDialog, setSuspendDialog] = useState(false);
 
     async function handleApprove() {
         startTransition(async () => {
@@ -61,17 +64,8 @@ export function CompanyActionsBar({ company }: CompanyActionsBarProps) {
         });
     }
 
-    async function handleSuspend() {
-        startTransition(async () => {
-            const result = await suspendCompanyAction({ companyId: company.$id });
-
-            if (result?.data?.success) {
-                toast.success(result.data.message);
-                router.refresh();
-            } else if (result?.serverError) {
-                toast.error(result.serverError);
-            }
-        });
+    function handleSuspend() {
+        setSuspendDialog(true);
     }
 
     async function handleActivate() {
@@ -157,8 +151,6 @@ export function CompanyActionsBar({ company }: CompanyActionsBarProps) {
                 <Suspense fallback={null}>
                     <RejectCompanyDialog
                         company={company}
-                        open={rejectDialog}
-                        onOpenChange={setRejectDialog}
                     />
                 </Suspense>
             )}
@@ -167,8 +159,6 @@ export function CompanyActionsBar({ company }: CompanyActionsBarProps) {
                 <Suspense fallback={null}>
                     <EditCompanyDialog
                         company={company}
-                        open={editDialog}
-                        onOpenChange={setEditDialog}
                     />
                 </Suspense>
             )}
@@ -177,8 +167,16 @@ export function CompanyActionsBar({ company }: CompanyActionsBarProps) {
                 <Suspense fallback={null}>
                     <DeleteCompanyDialog
                         company={company}
-                        open={deleteDialog}
-                        onOpenChange={setDeleteDialog}
+                    />
+                </Suspense>
+            )}
+
+            {suspendDialog && (
+                <Suspense fallback={null}>
+                    <SuspendCompanyDialog
+                        company={company}
+                        open={suspendDialog}
+                        onOpenChange={setSuspendDialog}
                     />
                 </Suspense>
             )}

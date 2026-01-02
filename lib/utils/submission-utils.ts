@@ -180,19 +180,19 @@ export const SubmissionValueHelpers = {
 
     // Set appropriate value field based on type
     switch (field.type) {
-      case "text":
-      case "textarea":
+      case "short_text":
+      case "long_text":
       case "email":
       case "phone":
       case "url":
-      case "select":
+      case "dropdown":
       case "radio":
+      case "rich_text":
         baseValue.valueText = value ? String(value) : undefined;
         break;
 
       case "number":
       case "currency":
-      case "percentage":
       case "rating":
       case "scale":
         baseValue.valueNumber =
@@ -200,22 +200,22 @@ export const SubmissionValueHelpers = {
         break;
 
       case "checkbox":
-      case "boolean":
         baseValue.valueBoolean = Boolean(value);
         break;
 
       case "date":
       case "datetime":
       case "time":
+      case "date_range":
         baseValue.valueDate = value ? String(value) : undefined;
         break;
 
       case "multi_select":
-      case "checkbox_group":
         baseValue.valueArray = Array.isArray(value) ? value : [];
         break;
 
       case "file_upload":
+      case "image_upload":
         baseValue.valueFileIds = Array.isArray(value) ? value : [];
         break;
 

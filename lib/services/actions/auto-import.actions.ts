@@ -150,13 +150,30 @@ export const createFormFromImportAction = authAction
           status: "published", // Auto-publish
           fields: formFields,
           settings: {
+            isPublic: false,
+            allowAnonymous: false,
+            requireLogin: false,
+            allowEdit: false,
             allowMultipleSubmissions: true,
-            requireAuthentication: false,
             showProgressBar: true,
+            showQuestionNumbers: false,
+            shuffleQuestions: false,
+            confirmationMessage: "Thank you for your submission!",
+            redirectUrl: undefined,
+            enableNotifications: false,
+            notificationEmails: [],
+            enableAutoSave: false,
+            autoSaveInterval: 30,
+            collectEmail: true,
+            collectIpAddress: false,
+            enableRecaptcha: false,
           },
           metadata: {
+            totalFields: formFields.length,
+            totalSteps: 1,
+            estimatedTime: Math.ceil(formFields.length / 3),
             responseCount: 0,
-            lastSubmissionAt: null,
+            lastSubmittedAt: undefined,
           },
           createdBy: ctx.userId,
         },
@@ -282,8 +299,9 @@ export const createFormFromImportAction = authAction
         if (successCount > 0) {
           await formModel.updateById(form.$id, {
             metadata: {
+              ...form.metadata,
               responseCount: successCount,
-              lastSubmissionAt: new Date().toISOString(),
+              lastSubmittedAt: new Date().toISOString(),
             },
           });
         }

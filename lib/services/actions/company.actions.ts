@@ -17,7 +17,8 @@ import {
 } from "@/lib/schemas/company-schemas";
 import { AdminUsersService, UserDataAdminModel } from "../models/users.model";
 import { AdminTeamsService } from "../core/base-teams";
-import { action, authAction, superAdminAction } from "@/lib/safe-action";
+import { action, authAction, superAdminAction, createRoleAction } from "@/lib/safe-action";
+import { getRoleArray } from "@/lib/constants/rbac-roles";
 import {
   sendCompanyActivatedEmail,
   sendCompanyApprovedEmail,
@@ -498,24 +499,23 @@ export const updateCompanyAction = superAdminAction
   });
 
 // Action for company owners/admins to update their own company profile
-export const updateOwnCompanyAction = authAction
+export const updateOwnCompanyAction = createRoleAction(getRoleArray("OWNER_AND_ADMIN"))
   .inputSchema(updateOwnCompanySchema)
   .action(async ({ parsedInput, ctx }) => {
     try {
       const { companyId, ...updateData } = parsedInput;
 
-      // Verify user is owner or admin of this company
-      if (!ctx.userData?.companyId) {
+      // Verify user is associated with a company
+      if (!ctx.isSuperAdmin && !('companyId' in ctx)) {
         return { error: "You are not associated with any company" };
       }
 
-      if (ctx.userData.companyId !== companyId) {
-        return { error: "You can only update your own company profile" };
-      }
-
-      const userRole = ctx.userData.role;
-      if (userRole !== "owner" && userRole !== "admin") {
-        return { error: "Only owners and admins can update company profile" };
+      // For non-superadmins, verify they're updating their own company
+      if (!ctx.isSuperAdmin) {
+        const userCtx = ctx as typeof ctx & { companyId: string };
+        if (userCtx.companyId !== companyId) {
+          return { error: "You can only update your own company profile" };
+        }
       }
 
       const companyModel = new CompanyAdminModel();

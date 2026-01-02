@@ -39,13 +39,9 @@ export const updateUserProfileAction = authAction
 
       // Revalidate cache
       revalidatePath("/dashboard/profile");
-      if (ctx.userData?.companyId) {
-        revalidatePath(`/org/${ctx.userData.companyId}`);
+      if (userData.companyId) {
+        revalidatePath(`/org/${userData.companyId}`);
       }
-
-      // Revalidate user profile cache tag
-      const { revalidateTag } = await import("next/cache");
-      revalidateTag(`user-profile-${ctx.userId}`);
 
       return {
         success: true,

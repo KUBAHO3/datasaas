@@ -149,7 +149,7 @@ export function TeamMembersTable({
                                     {getRoleBadge(member.role)}
                                 </td>
                                 <td className="px-6 py-4 text-sm text-muted-foreground">
-                                    {format(new Date(member.joined), "MMM d, yyyy")}
+                                    {member.joined ? format(new Date(member.joined), "MMM d, yyyy") : "Pending"}
                                 </td>
                                 {canManageMembers && (
                                     <td className="px-6 py-4">
