@@ -175,7 +175,7 @@ export function DataCollectionClient({
     const completedCount = rows.filter(r => r.submission.status === "completed").length;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 max-w-full">
             {/* Header Card with Form Selection & Actions */}
             <Card>
                 <CardContent className="pt-6">

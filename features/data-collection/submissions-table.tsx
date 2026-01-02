@@ -195,7 +195,7 @@ export function SubmissionsTable({
                 </div>
             </CardHeader>
             <CardContent className="p-0">
-                <div className="relative w-full overflow-auto">
+                <div className="relative w-full overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>

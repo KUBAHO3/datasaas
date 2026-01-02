@@ -52,7 +52,7 @@ export async function DataCollectionContent({
     const rows = await getSubmissionsWithValues(selectedForm.$id);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 max-w-full overflow-x-hidden">
             {/* Stats Section with Suspense for Streaming */}
             <Suspense fallback={<StatsLoadingSkeleton />}>
                 <DataCollectionStats formId={selectedForm.$id} />
